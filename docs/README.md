@@ -1,4 +1,3 @@
-```markdown
 # 🏡 Real Estate Analytics MD
 
 A modular data pipeline for collecting, transforming, and analyzing real estate listings in Moldova.
