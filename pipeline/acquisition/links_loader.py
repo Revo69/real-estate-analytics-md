@@ -26,8 +26,7 @@ logging.basicConfig(
     ]
 )
 
-# Настройки
-BASE_URL = "https://999.md/ru/list/real-estate/apartments-and-rooms?view_type=short&page={}&appl=1&ef=16,9441,32,30,2307&eo=13859,12885,12900,12912&o_16_1=778,776,777,903,912,922"
+BASE_URL = "https://999.md/ru/list/real-estate/apartments-and-rooms?view_type=short&page={}"
 MAX_PAGES = 5
 MAX_WORKERS = 3
 MAX_RETRIES = 3
@@ -42,34 +41,22 @@ def init_driver():
     return webdriver.Chrome(options=options)
 
 
-def wait_for_links(driver, timeout=10):
-    try:
-        WebDriverWait(driver, timeout).until(
-            EC.presence_of_all_elements_located((By.CLASS_NAME, "AdShort_title__link__EnVP9"))
-        )
-        return True
-    except Exception:
-        return False
-
-
 def fetch_links_from_page(page: int) -> list[str]:
-    """Парсит одну страницу с retry. Возвращает список ссылок или [] при фейле."""
     driver = init_driver()
     try:
-        parsed = urlparse(BASE_URL)
-        q = dict(parse_qsl(parsed.query))
-        if page == 1:
-            q.pop("page", None)
-        else:
-            q["page"] = str(page)
-        url = urlunparse(parsed._replace(query=urlencode(q, doseq=True)))
+        parsed = urlparse(BASE_URL.format(page))
+        url = urlunparse(parsed)
 
         for attempt in range(1, MAX_RETRIES + 1):
             logging.info(f"Page {page}, attempt {attempt}: {url}")
             driver.get(url)
             time.sleep(1.0)
 
-            if not wait_for_links(driver):
+            try:
+                WebDriverWait(driver, 10).until(
+                    EC.presence_of_all_elements_located((By.CLASS_NAME, "AdShort_title__link__EnVP9"))
+                )
+            except Exception:
                 logging.warning(f"Timeout waiting for links on page {page}")
                 continue
 
@@ -80,16 +67,15 @@ def fetch_links_from_page(page: int) -> list[str]:
                 links = []
                 for link in link_elements:
                     href = link.get("href")
-                    if not href:
-                        continue
-                    href = href.split("?")[0]
-                    if href.startswith("/"):
-                        full_link = "https://999.md" + href
-                    elif href.startswith("http"):
-                        full_link = href
-                    else:
-                        full_link = "https://999.md/" + href
-                    links.append(full_link)
+                    if href:
+                        href = href.split("?")[0]
+                        if href.startswith("/"):
+                            full_link = "https://999.md" + href
+                        elif href.startswith("http"):
+                            full_link = href
+                        else:
+                            full_link = "https://999.md/" + href
+                        links.append(full_link)
                 logging.info(f"Found {len(links)} links on page {page}")
                 return links
 
@@ -99,9 +85,8 @@ def fetch_links_from_page(page: int) -> list[str]:
         driver.quit()
 
 
-def save_links_to_db(links: list[str], db_path: str = DB_PATH) -> None:
-    """Сохраняет ссылки в SQLite, проверяя дубликаты."""
-    with sqlite3.connect(db_path) as conn:
+def save_links_to_db(links: list[str]):
+    with sqlite3.connect(DB_PATH) as conn:
         cur = conn.cursor()
         cur.execute("""
             CREATE TABLE IF NOT EXISTS raw_links (
@@ -114,15 +99,13 @@ def save_links_to_db(links: list[str], db_path: str = DB_PATH) -> None:
             )
         """)
         before = cur.execute("SELECT COUNT(*) FROM raw_links").fetchone()[0]
-
         cur.executemany(
             "INSERT OR IGNORE INTO raw_links (id, url) VALUES (?, ?)",
             [(str(uuid.uuid4()), u) for u in links]
         )
         conn.commit()
-
         after = cur.execute("SELECT COUNT(*) FROM raw_links").fetchone()[0]
-        logging.info("Saved %d new links (total %d)", after - before, after)
+        logging.info(f"Saved {after - before} new links (total {after})")
 
 
 def main():
@@ -137,7 +120,7 @@ def main():
             else:
                 logging.error(f"Page {page} completely failed after {MAX_RETRIES} retries")
 
-    logging.info("Collected %d unique links", len(all_links))
+    logging.info(f"Collected {len(all_links)} unique links")
     save_links_to_db(sorted(all_links))
 
 
