@@ -32,7 +32,7 @@ jobs:
         run: python pipeline/acquisition/links_loader.py
 
       - name: 🏠 Run bronze loader
-        run: python -m pipeline.bronze.loader.py
+        run: python -m pipeline.bronze.loader
 
       - name: 📝 Commit updated DB
         run: |
