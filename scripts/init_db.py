@@ -2,8 +2,9 @@ import os
 import sqlite3
 import logging
 
+BASE_DIR = os.path.dirname(__file__)  # путь к scripts/
 DB_PATH = os.path.join("storage", "estate.db")
-SCHEMA_PATH = os.path.join("schema.sql")
+SCHEMA_PATH = os.path.join(BASE_DIR, "schema.sql")
 
 # Настройка логирования
 LOG_PATH = os.path.join("logs", "init_db.log")
