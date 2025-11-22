@@ -78,7 +78,7 @@ def extract_text(soup, selector, key_name, mapping=None, normalize=True, remove_
 
 
 def extract_all_prices(soup) -> dict:
-    result = {"price_mdl": None, "price_eur": None, "price_usd": None}
+    result = {"mdl": None, "eur": None, "usd": None}
 
     main_tag = soup.select_one("span.styles_footer__main__8seZ7")
     if main_tag:
@@ -86,11 +86,11 @@ def extract_all_prices(soup) -> dict:
         if "MDL" in main_text:
             match = re.search(r"([\d\s]+)\s*MDL", main_text)
             if match:
-                result["price_mdl"] = int(match.group(1).replace(" ", ""))
+                result["mdl"] = int(match.group(1).replace(" ", ""))
         elif "€" in main_text:
             match = re.search(r"([\d\s]+)\s*€", main_text)
             if match:
-                result["price_eur"] = int(match.group(1).replace(" ", ""))
+                result["eur"] = int(match.group(1).replace(" ", ""))
 
     converted_tags = soup.select("ul.styles_footer__converted__kKoJd li")
     for li in converted_tags:
@@ -98,15 +98,15 @@ def extract_all_prices(soup) -> dict:
         if "€" in text:
             match = re.search(r"≈\s*([\d\s]+)\s*€", text)
             if match:
-                result["price_eur"] = int(match.group(1).replace(" ", ""))
+                result["eur"] = int(match.group(1).replace(" ", ""))
         elif "$" in text:
             match = re.search(r"≈\s*([\d\s]+)\s*\$", text)
             if match:
-                result["price_usd"] = int(match.group(1).replace(" ", ""))
+                result["usd"] = int(match.group(1).replace(" ", ""))
         elif "MDL" in text:
             match = re.search(r"≈\s*([\d\s]+)\s*MDL", text)
             if match:
-                result["price_mdl"] = int(match.group(1).replace(" ", ""))
+                result["mdl"] = int(match.group(1).replace(" ", ""))
 
     return result
 
@@ -143,7 +143,8 @@ def parse_features(url: str) -> dict:
             "additional_features"
         ))
 
-        features.update(extract_all_prices(soup))
+        # 💰 Цены в JSON
+        features["price_json"] = extract_all_prices(soup)
 
         return features
 
