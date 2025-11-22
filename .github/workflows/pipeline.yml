@@ -4,7 +4,10 @@ on:
   schedule:
     - cron: '0 3 * * *'   # Run every day at 03:00 UTC
   workflow_dispatch:       # Manual trigger option
-
+  
+permissions:
+  contents: write
+  
 jobs:
   run-pipeline:
     runs-on: ubuntu-latest
