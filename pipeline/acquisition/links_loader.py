@@ -27,7 +27,7 @@ logging.basicConfig(
 )
 
 BASE_URL = "https://999.md/ru/list/real-estate/apartments-and-rooms?view_type=short&page={}&appl=1&ef=16,9441,32,30,2307&eo=13859,12885,12900,12912&o_16_1=778,776,777,903,912,922"
-MAX_PAGES = 5
+MAX_PAGES = 2
 MAX_WORKERS = 3
 MAX_RETRIES = 3
 DB_PATH = os.path.join("storage", "estate.db")
