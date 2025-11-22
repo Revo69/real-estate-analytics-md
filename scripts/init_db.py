@@ -6,7 +6,7 @@ BASE_DIR = os.path.dirname(__file__)  # path to scripts/
 DB_PATH = os.path.join("storage", "estate.db")
 SCHEMA_PATH = os.path.join(BASE_DIR, "schema.sql")
 
-# Настройка логирования
+# Configure logging
 LOG_PATH = os.path.join("logs", "init_db.log")
 os.makedirs("logs", exist_ok=True)
 
@@ -24,7 +24,7 @@ def init_db():
     os.makedirs("storage", exist_ok=True)
     logging.info("Starting database initialization...")
 
-    # Читаем schema.sql
+    # Read schema.sql
     try:
         with open(SCHEMA_PATH, "r", encoding="utf-8") as f:
             schema_sql = f.read()
@@ -33,7 +33,7 @@ def init_db():
         logging.error(f"Failed to read schema.sql: {e}")
         return
 
-    # Прогоняем SQL в SQLite
+    # Run SQL statements in SQLite
     try:
         with sqlite3.connect(DB_PATH) as conn:
             cur = conn.cursor()
