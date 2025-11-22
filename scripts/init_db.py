@@ -2,7 +2,7 @@ import os
 import sqlite3
 import logging
 
-BASE_DIR = os.path.dirname(__file__)  # путь к scripts/
+BASE_DIR = os.path.dirname(__file__)  # path to scripts/
 DB_PATH = os.path.join("storage", "estate.db")
 SCHEMA_PATH = os.path.join(BASE_DIR, "schema.sql")
 
