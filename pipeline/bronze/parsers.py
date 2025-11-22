@@ -57,6 +57,11 @@ def extract_boolean_features(soup, block_selector, item_selector, key_map, block
 
     return result
 
+def extract_attr(soup, selector, attr_name, key_name):
+    tag = soup.select_one(selector)
+    if not tag:
+        return {key_name: None}
+    return {key_name: tag.get(attr_name)}
 
 def extract_text(soup, selector, key_name, mapping=None, normalize=True, remove_prefix=None):
     tag = soup.select_one(selector)
