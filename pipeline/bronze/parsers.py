@@ -124,7 +124,7 @@ def parse_features(url: str) -> dict:
 
         features = {"url": url, "status": "success"}
 
-        features.update(extract_text(soup, 'meta[property="product:retailer_item_id"]', "ad_id"))
+        features.update(extract_attr(soup, 'meta[property="product:retailer_item_id"]', "content", "ad_id"))
         features.update(extract_text(soup, "p.styles_date__voWnk", "publication_date", remove_prefix="Дата публикации:"))
         features.update(extract_text(soup, "a.styles_owner__login__VKE71", "user_login"))
         features.update(extract_text(soup, "p.styles_type___J9Dy", "deal_type", remove_prefix="Тип:"))
