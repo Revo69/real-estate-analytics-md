@@ -1,4 +1,4 @@
-name: Real Estate ETL
+name: Real Estate Pipeline
 
 on:
   schedule:
