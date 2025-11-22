@@ -26,7 +26,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: 🗄️ Initialize database
-        run: python pipeline/init_db.py
+        run: python scripts/init_db.py
 
       - name: 🔗 Run links loader
         run: python pipeline/acquisition/links_loader.py
