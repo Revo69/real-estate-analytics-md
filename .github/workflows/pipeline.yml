@@ -1,43 +1,49 @@
-name: Real Estate Pipeline
+name: Real Estate ETL
 
 on:
   schedule:
-    # Run every day at 03:00 UTC
-    - cron: "0 3 * * *"
-  workflow_dispatch:   # Manual trigger
+    - cron: '0 3 * * *'   # Run every day at 03:00 UTC
+  workflow_dispatch:       # Manual trigger option
 
 jobs:
   run-pipeline:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: 📥 Checkout repo
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Set up Python
+      - name: 🐍 Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: '3.11'
 
-      - name: Install dependencies
+      - name: 📦 Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Initialize database
-        run: |
-          python pipeline/init_db.py
+      - name: 🗄️ Initialize database
+        run: python pipeline/init_db.py
 
-      - name: Run links loader
-        run: |
-          python pipeline/acquisition/links_loader.py
+      - name: 🔗 Run links loader
+        run: python pipeline/acquisition/links_loader.py
 
-      - name: Run bronze loader
-        run: |
-          python pipeline/bronze/loader.py
+      - name: 🏠 Run bronze loader
+        run: python pipeline/bronze/loader.py
 
-      - name: Upload logs as artifact
+      - name: 📝 Commit updated DB
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add storage/estate.db
+          git commit -m "Update DB after pipeline run" || echo "No changes to commit"
+          git push
+
+      - name: 📎 Upload logs as artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: pipeline-logs
+          name: pipeline-logs-${{ github.run_id }}
           path: logs/
