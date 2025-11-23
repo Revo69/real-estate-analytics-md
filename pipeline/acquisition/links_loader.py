@@ -98,7 +98,7 @@ def fetch_links_from_page(page: int) -> list[str]:
                 continue
 
             try:
-                WebDriverWait(driver, 15).until(
+                WebDriverWait(driver, 8).until(
                     EC.presence_of_all_elements_located((By.CLASS_NAME, "AdShort_title__link__EnVP9"))
                 )
             except TimeoutException:
