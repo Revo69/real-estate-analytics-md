@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS raw_links (
 );
 
 -- Bronze layer: extracted advertisement data
-CREATE TABLE IF NOT EXISTS raw_estate (
+CREATE TABLE IF NOT EXISTS bronze_estate (
     id TEXT PRIMARY KEY,
     url TEXT NOT NULL UNIQUE,
     ad_id TEXT,
