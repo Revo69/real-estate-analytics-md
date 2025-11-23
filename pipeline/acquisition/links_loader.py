@@ -14,8 +14,9 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, WebDriverException
 
 from bs4 import BeautifulSoup
+import argparse
 
-# Настройка логирования
+# Logging setup
 LOG_PATH = os.path.join("logs", "links_loader.log")
 os.makedirs("logs", exist_ok=True)
 
@@ -34,7 +35,7 @@ BASE_URL = (
     "?view_type=short&page={}&appl=1&ef=16,9441,32,30,2307"
     "&eo=13859,12885,12900,12912&o_16_1=778,776,777,903,912,922"
 )
-MAX_WORKERS = int(os.getenv("MAX_WORKERS", 3))  # меньше потоков для CI
+MAX_WORKERS = int(os.getenv("MAX_WORKERS", 3))  # fewer threads for CI stability
 MAX_RETRIES = 3
 DB_PATH = os.path.join("storage", "estate.db")
 
@@ -50,32 +51,32 @@ def init_driver():
 
 
 def get_max_pages() -> int:
-    """Определяем реальное количество страниц через кнопку 'последняя страница'."""
+    """Determine the actual number of pages by clicking the 'last page' button."""
     driver = init_driver()
     try:
         driver.get(BASE_URL.format(1))
 
-        # Ждём появления кнопки "последняя страница" и кликаем
+        # Wait for the "last page" button and click it
         last_button = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.CLASS_NAME,
                 "Pagination_pagination__container__buttons__wrapper__icon__last__page__84ROu"))
         )
         last_button.click()
 
-        # Ждём появления ряда кнопок с номерами страниц
+        # Wait for pagination buttons to appear
         WebDriverWait(driver, 10).until(
             EC.presence_of_all_elements_located((By.CSS_SELECTOR, "button[data-testid='pagination-page']"))
         )
 
-        # Парсим DOM и берём максимальное значение
+        # Parse DOM and get the maximum page number
         soup = BeautifulSoup(driver.page_source, "html.parser")
         buttons = soup.find_all("button", {"data-testid": "pagination-page"})
         if not buttons:
-            logging.warning("Не удалось найти кнопки пагинации, fallback = 200")
+            logging.warning("Pagination buttons not found, fallback = 200")
             return 200
 
         max_page = max(int(btn.get("data-test-page-value", 1)) for btn in buttons)
-        logging.info(f"Определено максимальное количество страниц: {max_page}")
+        logging.info(f"Detected maximum number of pages: {max_page}")
         return max_page
     finally:
         driver.quit()
@@ -154,12 +155,14 @@ def save_links_to_db(links: list[str]):
 
 
 def main():
-    max_pages = get_max_pages()
-    logging.info(f"Будем собирать ссылки до страницы {max_pages}")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--start", type=int, required=True, help="Start page number")
+    parser.add_argument("--end", type=int, required=True, help="End page number")
+    args = parser.parse_args()
 
     all_links = set()
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        futures = {executor.submit(fetch_links_from_page, page): page for page in range(1, max_pages + 1)}
+        futures = {executor.submit(fetch_links_from_page, page): page for page in range(args.start, args.end + 1)}
         for future in as_completed(futures):
             page = futures[future]
             try:
@@ -167,15 +170,13 @@ def main():
                 if links:
                     all_links.update(links)
                 else:
-                    logging.error(f"Page {page} полностью провалилась")
+                    logging.error(f"Page {page} completely failed")
             except Exception as e:
-                logging.exception(f"Ошибка на странице {page}: {e}")
+                logging.exception(f"Unexpected error on page {page}: {e}")
 
-    logging.info(f"Collected {len(all_links)} unique links")
+    logging.info(f"Collected {len(all_links)} unique links in batch {args.start}-{args.end}")
     if all_links:
         save_links_to_db(sorted(all_links))
-    else:
-        logging.error("No links collected at all!")
 
 
 if __name__ == "__main__":
