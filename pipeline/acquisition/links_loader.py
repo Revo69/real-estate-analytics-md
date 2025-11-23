@@ -77,7 +77,7 @@ def get_max_pages() -> int:
 
         max_page = max(int(btn.get("data-test-page-value", 1)) for btn in buttons)
         logging.info(f"Detected maximum number of pages: {max_page}")
-        return max_page
+        return 1 #max_page
     finally:
         driver.quit()
 
