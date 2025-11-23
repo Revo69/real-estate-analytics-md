@@ -38,16 +38,16 @@ jobs:
 
       # Run link loader in batches
       - name: 🔗 Run links loader (pages 1-100)
-        run: python pipeline/acquisition/links_loader.py --start 1 --end 100
+        run: python pipeline/acquisition/links_loader.py --start 1 --end 2
 
-      - name: 🔗 Run links loader (pages 101-200)
-        run: python pipeline/acquisition/links_loader.py --start 101 --end 200
+      #- name: 🔗 Run links loader (pages 101-200)
+      #  run: python pipeline/acquisition/links_loader.py --start 101 --end 200
 
-      - name: 🔗 Run links loader (pages 201-300)
-        run: python pipeline/acquisition/links_loader.py --start 201 --end 300
+      #- name: 🔗 Run links loader (pages 201-300)
+      #  run: python pipeline/acquisition/links_loader.py --start 201 --end 300
 
-      - name: 🔗 Run links loader (pages 301-385)
-        run: python pipeline/acquisition/links_loader.py --start 301 --end 385
+      #- name: 🔗 Run links loader (pages 301-385)
+      #  run: python pipeline/acquisition/links_loader.py --start 301 --end 385
 
       - name: 🏠 Run bronze loader
         run: python -m pipeline.bronze.loader
