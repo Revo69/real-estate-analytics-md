@@ -11,6 +11,7 @@ permissions:
 jobs:
   run-pipeline:
     runs-on: ubuntu-latest
+    timeout-minutes: 240   # allow long runs
 
     steps:
       - name: 📥 Checkout repo
@@ -31,8 +32,18 @@ jobs:
       - name: 🗄️ Initialize database
         run: python scripts/init_db.py
 
-      - name: 🔗 Run links loader
-        run: python pipeline/acquisition/links_loader.py
+      # Run link loader in batches
+      - name: 🔗 Run links loader (pages 1-100)
+        run: python pipeline/acquisition/links_loader.py --start 1 --end 100
+
+      - name: 🔗 Run links loader (pages 101-200)
+        run: python pipeline/acquisition/links_loader.py --start 101 --end 200
+
+      - name: 🔗 Run links loader (pages 201-300)
+        run: python pipeline/acquisition/links_loader.py --start 201 --end 300
+
+      - name: 🔗 Run links loader (pages 301-385)
+        run: python pipeline/acquisition/links_loader.py --start 301 --end 385
 
       - name: 🏠 Run bronze loader
         run: python -m pipeline.bronze.loader
@@ -44,7 +55,7 @@ jobs:
           git add storage/estate.db
           git commit -m "Update DB after pipeline run" || echo "No changes to commit"
           git push
-        
+          
       - name: 📎 Upload logs as artifacts
         uses: actions/upload-artifact@v4
         with:
