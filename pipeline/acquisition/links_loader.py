@@ -73,7 +73,7 @@ def get_max_pages() -> int:
         buttons = soup.find_all("button", {"data-testid": "pagination-page"})
         if not buttons:
             logging.warning("Pagination buttons not found, fallback = 200")
-            return 200
+            return 1 #200
 
         max_page = max(int(btn.get("data-test-page-value", 1)) for btn in buttons)
         logging.info(f"Detected maximum number of pages: {max_page}")
