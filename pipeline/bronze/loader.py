@@ -5,7 +5,7 @@ import uuid
 import json
 from .parsers import parse_features
 
-# Настройка логирования
+# Logging setup
 LOG_PATH = os.path.join("logs", "bronze_loader.log")
 os.makedirs("logs", exist_ok=True)
 
@@ -23,6 +23,7 @@ DB_PATH = os.path.join("storage", "estate.db")
 
 
 def save_estate(record: dict):
+    """Save a single estate record into the raw_estate table."""
     with sqlite3.connect(DB_PATH) as conn:
         cur = conn.cursor()
         cur.execute("""
@@ -63,12 +64,13 @@ def save_estate(record: dict):
                 json.dumps(record.get("additional_features"), ensure_ascii=False)
             ))
             conn.commit()
-            logging.info(f"Saved estate {record.get('url')}")
+            logging.info(f"Saved estate record: {record.get('url')}")
         except Exception as e:
-            logging.error(f"Failed to save estate {record.get('url')}: {e}")
+            logging.error(f"Failed to save estate record {record.get('url')}: {e}")
 
 
 def main():
+    """Load pending links from raw_links, parse them, and save into raw_estate."""
     with sqlite3.connect(DB_PATH) as conn:
         cur = conn.cursor()
         cur.execute("SELECT url FROM raw_links WHERE status='pending'")
@@ -93,4 +95,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
