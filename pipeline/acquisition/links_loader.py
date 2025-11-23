@@ -3,13 +3,16 @@ import time
 import logging
 import sqlite3
 import uuid
-from urllib.parse import urlparse, parse_qsl, urlencode, urlunparse
+from urllib.parse import urlparse, urlunparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException, WebDriverException
+
 from bs4 import BeautifulSoup
 
 # Настройка логирования
@@ -26,9 +29,12 @@ logging.basicConfig(
     ]
 )
 
-BASE_URL = "https://999.md/ru/list/real-estate/apartments-and-rooms?view_type=short&page={}&appl=1&ef=16,9441,32,30,2307&eo=13859,12885,12900,12912&o_16_1=778,776,777,903,912,922"
-MAX_PAGES = 200
-MAX_WORKERS = 5
+BASE_URL = (
+    "https://999.md/ru/list/real-estate/apartments-and-rooms"
+    "?view_type=short&page={}&appl=1&ef=16,9441,32,30,2307"
+    "&eo=13859,12885,12900,12912&o_16_1=778,776,777,903,912,922"
+)
+MAX_WORKERS = int(os.getenv("MAX_WORKERS", 3))  # меньше потоков для CI
 MAX_RETRIES = 3
 DB_PATH = os.path.join("storage", "estate.db")
 
@@ -37,26 +43,64 @@ def init_driver():
     options = Options()
     options.add_argument("--headless=new")
     options.add_argument("--disable-gpu")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
     options.add_experimental_option("excludeSwitches", ["enable-logging"])
     return webdriver.Chrome(options=options)
+
+
+def get_max_pages() -> int:
+    """Определяем реальное количество страниц через кнопку 'последняя страница'."""
+    driver = init_driver()
+    try:
+        driver.get(BASE_URL.format(1))
+
+        # Ждём появления кнопки "последняя страница" и кликаем
+        last_button = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.CLASS_NAME,
+                "Pagination_pagination__container__buttons__wrapper__icon__last__page__84ROu"))
+        )
+        last_button.click()
+
+        # Ждём появления ряда кнопок с номерами страниц
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_all_elements_located((By.CSS_SELECTOR, "button[data-testid='pagination-page']"))
+        )
+
+        # Парсим DOM и берём максимальное значение
+        soup = BeautifulSoup(driver.page_source, "html.parser")
+        buttons = soup.find_all("button", {"data-testid": "pagination-page"})
+        if not buttons:
+            logging.warning("Не удалось найти кнопки пагинации, fallback = 200")
+            return 200
+
+        max_page = max(int(btn.get("data-test-page-value", 1)) for btn in buttons)
+        logging.info(f"Определено максимальное количество страниц: {max_page}")
+        return max_page
+    finally:
+        driver.quit()
 
 
 def fetch_links_from_page(page: int) -> list[str]:
     driver = init_driver()
     try:
-        parsed = urlparse(BASE_URL.format(page))
-        url = urlunparse(parsed)
+        url = urlunparse(urlparse(BASE_URL.format(page)))
 
         for attempt in range(1, MAX_RETRIES + 1):
             logging.info(f"Page {page}, attempt {attempt}: {url}")
-            driver.get(url)
-            time.sleep(1.0)
+            try:
+                driver.set_page_load_timeout(60)
+                driver.get(url)
+            except (TimeoutException, WebDriverException) as e:
+                logging.warning(f"Page {page} failed to load (attempt {attempt}): {e}")
+                time.sleep(5)
+                continue
 
             try:
-                WebDriverWait(driver, 10).until(
+                WebDriverWait(driver, 15).until(
                     EC.presence_of_all_elements_located((By.CLASS_NAME, "AdShort_title__link__EnVP9"))
                 )
-            except Exception:
+            except TimeoutException:
                 logging.warning(f"Timeout waiting for links on page {page}")
                 continue
 
@@ -86,6 +130,7 @@ def fetch_links_from_page(page: int) -> list[str]:
 
 
 def save_links_to_db(links: list[str]):
+    os.makedirs("storage", exist_ok=True)
     with sqlite3.connect(DB_PATH) as conn:
         cur = conn.cursor()
         cur.execute("""
@@ -109,19 +154,28 @@ def save_links_to_db(links: list[str]):
 
 
 def main():
+    max_pages = get_max_pages()
+    logging.info(f"Будем собирать ссылки до страницы {max_pages}")
+
     all_links = set()
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        futures = {executor.submit(fetch_links_from_page, page): page for page in range(1, MAX_PAGES + 1)}
+        futures = {executor.submit(fetch_links_from_page, page): page for page in range(1, max_pages + 1)}
         for future in as_completed(futures):
             page = futures[future]
-            links = future.result()
-            if links:
-                all_links.update(links)
-            else:
-                logging.error(f"Page {page} completely failed after {MAX_RETRIES} retries")
+            try:
+                links = future.result()
+                if links:
+                    all_links.update(links)
+                else:
+                    logging.error(f"Page {page} полностью провалилась")
+            except Exception as e:
+                logging.exception(f"Ошибка на странице {page}: {e}")
 
     logging.info(f"Collected {len(all_links)} unique links")
-    save_links_to_db(sorted(all_links))
+    if all_links:
+        save_links_to_db(sorted(all_links))
+    else:
+        logging.error("No links collected at all!")
 
 
 if __name__ == "__main__":
