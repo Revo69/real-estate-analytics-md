@@ -4,7 +4,8 @@ import logging
 
 BASE_DIR = os.path.dirname(__file__)  # path to scripts/
 DB_PATH = os.path.join("storage", "estate.db")
-SCHEMA_PATH = os.path.join(BASE_DIR, "schema.sql")
+SCHEMA_PATH = os.path.join(BASE_DIR, "..", "pipeline", "bronze", "schema.sql")
+
 
 # Configure logging
 LOG_PATH = os.path.join("logs", "init_db.log")
