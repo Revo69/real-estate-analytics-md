@@ -30,9 +30,7 @@ logging.basicConfig(
 )
 
 def parse_publication_date(raw_date: str):
-    """
-    Convert 'Дата обновления:22 ноя. 2025, 01:10' → datetime.date(2025, 11, 22)
-    """
+    """Convert 'Дата обновления:22 ноя. 2025, 01:10' → datetime.date(2025, 11, 22)"""
     if not raw_date:
         return None
     try:
@@ -48,6 +46,16 @@ def parse_publication_date(raw_date: str):
         logging.error(f"Failed to parse publication_date '{raw_date}': {e}")
         return None
 
+def safe_json_loads(raw: str):
+    """Safely parse JSON string, return {} if invalid."""
+    if not raw:
+        return {}
+    try:
+        return json.loads(raw)
+    except Exception as e:
+        logging.warning(f"Invalid JSON skipped: {e}")
+        return {}
+
 def transform_record(row):
     """Transform raw_estate row into silver_estate payload for Supabase."""
     (
@@ -55,9 +63,9 @@ def transform_record(row):
         region, description, price_json, main_features_json, additional_features_json
     ) = row
 
-    price = json.loads(price_json) if price_json else {}
-    main = json.loads(main_features_json) if main_features_json else {}
-    add = json.loads(additional_features_json) if additional_features_json else {}
+    price = safe_json_loads(price_json)
+    main = safe_json_loads(main_features_json)
+    add = safe_json_loads(additional_features_json)
 
     return {
         "id": id,
@@ -121,15 +129,23 @@ def transform_record(row):
         "playground": add.get("playground"),
     }
 
-def upload_estate(record: dict):
-    """Upload one estate record to Supabase silver_estate table."""
-    try:
-        supabase.table("silver_estate").upsert(record, on_conflict=["id"]).execute()
-        logging.info(f"✅ Uploaded estate {record['url']}")
-        return True
-    except Exception as e:
-        logging.error(f"❌ Failed to upload estate {record['url']}: {e}")
-        return False
+def batch_upload(records, batch_size=100):
+    """Upload records to Supabase in batches with logging statistics."""
+    success_count = 0
+    error_count = 0
+
+    for i in range(0, len(records), batch_size):
+        batch = records[i:i+batch_size]
+        try:
+            supabase.table("silver_estate").upsert(batch, on_conflict=["id"]).execute()
+            success_count += len(batch)
+            logging.info(f"✅ Uploaded batch {i//batch_size+1} ({len(batch)} records)")
+        except Exception as e:
+            error_count += len(batch)
+            logging.error(f"❌ Failed to upload batch {i//batch_size+1}: {e}")
+        time.sleep(0.5)  # small delay between batches
+
+    logging.info(f"📊 Upload summary: {success_count} successful, {error_count} failed")
 
 def main():
     with sqlite3.connect(DB_PATH) as conn:
@@ -143,17 +159,10 @@ def main():
 
     logging.info(f"Found {len(rows)} estates to upload")
 
-    for row in rows:
-        record = transform_record(row)
-        success = upload_estate(record)
-        if success:
-            logging.info(f"✅ Estate {record['url']} uploaded to Supabase")
-        else:
-            logging.warning(f"⚠️ Estate {record['url']} skipped due to error")
-        time.sleep(0.2)  # small delay to avoid hitting rate limits
+    records = [transform_record(row) for row in rows]
+    batch_upload(records, batch_size=100)
 
     logging.info("🎉 Silver layer sync completed")
 
 if __name__ == "__main__":
     main()
-
