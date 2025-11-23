@@ -50,7 +50,8 @@ def init_driver():
         "Chrome/120.0.0.0 Safari/537.36"
     )
     # ⚠️ Важно: не использовать headless, иначе Cloudflare блокирует
-    driver = uc.Chrome(options=options)
+    driver = uc.Chrome(options=options, driver_executable_path="/usr/bin/chromedriver")
+
     return driver
 
 
