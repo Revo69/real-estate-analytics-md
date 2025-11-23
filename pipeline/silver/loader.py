@@ -3,9 +3,11 @@ import logging
 import sqlite3
 import json
 import time
+from datetime import datetime
 from dotenv import load_dotenv
 from supabase import create_client, Client
 from config import DB_PATH
+from .mappings import MONTHS_MAP
 
 # Load environment variables
 load_dotenv()
@@ -27,6 +29,25 @@ logging.basicConfig(
     ]
 )
 
+def parse_publication_date(raw_date: str):
+    """
+    Convert 'Дата обновления:22 ноя. 2025, 01:10' → datetime.date(2025, 11, 22)
+    """
+    if not raw_date:
+        return None
+    try:
+        raw_date = raw_date.replace("Дата обновления:", "").strip()
+        date_part, time_part = raw_date.split(",")
+        day, month_str, year = date_part.strip().split(" ")
+        month = MONTHS_MAP.get(month_str.lower())
+        if not month:
+            raise ValueError(f"Unknown month: {month_str}")
+        dt = datetime.strptime(f"{day}.{month}.{year} {time_part.strip()}", "%d.%m.%Y %H:%M")
+        return dt.date()
+    except Exception as e:
+        logging.error(f"Failed to parse publication_date '{raw_date}': {e}")
+        return None
+
 def transform_record(row):
     """Transform raw_estate row into silver_estate payload for Supabase."""
     (
@@ -43,7 +64,7 @@ def transform_record(row):
         "url": url,
         "ad_id": ad_id,
         "status": status,
-        "publication_date": publication_date,
+        "publication_date": parse_publication_date(publication_date),
         "user_login": user_login,
         "deal_type": deal_type,
         "region": region,
@@ -135,3 +156,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
