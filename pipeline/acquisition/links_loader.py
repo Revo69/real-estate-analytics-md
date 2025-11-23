@@ -6,8 +6,7 @@ import uuid
 from urllib.parse import urlparse, urlunparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
+import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -35,51 +34,24 @@ BASE_URL = (
     "?view_type=short&page={}&appl=1&ef=16,9441,32,30,2307"
     "&eo=13859,12885,12900,12912&o_16_1=778,776,777,903,912,922"
 )
-MAX_WORKERS = int(os.getenv("MAX_WORKERS", 3))  # fewer threads for CI stability
+MAX_WORKERS = int(os.getenv("MAX_WORKERS", 3))
 MAX_RETRIES = 3
 DB_PATH = os.path.join("storage", "estate.db")
 
 
 def init_driver():
-    options = Options()
-    options.add_argument("--headless=new")
-    options.add_argument("--disable-gpu")
-    #options.add_argument("--no-sandbox")
-    #options.add_argument("--disable-dev-shm-usage")
-    options.add_experimental_option("excludeSwitches", ["enable-logging"])
-    return webdriver.Chrome(options=options)
-
-
-def get_max_pages() -> int:
-    """Determine the actual number of pages by clicking the 'last page' button."""
-    driver = init_driver()
-    try:
-        driver.get(BASE_URL.format(1))
-
-        # Wait for the "last page" button and click it
-        last_button = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.CLASS_NAME,
-                "Pagination_pagination__container__buttons__wrapper__icon__last__page__84ROu"))
-        )
-        last_button.click()
-
-        # Wait for pagination buttons to appear
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_all_elements_located((By.CSS_SELECTOR, "button[data-testid='pagination-page']"))
-        )
-
-        # Parse DOM and get the maximum page number
-        soup = BeautifulSoup(driver.page_source, "html.parser")
-        buttons = soup.find_all("button", {"data-testid": "pagination-page"})
-        if not buttons:
-            logging.warning("Pagination buttons not found, fallback = 200")
-            return 200
-
-        max_page = max(int(btn.get("data-test-page-value", 1)) for btn in buttons)
-        logging.info(f"Detected maximum number of pages: {max_page}")
-        return max_page
-    finally:
-        driver.quit()
+    options = uc.ChromeOptions()
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_argument("--start-maximized")
+    options.add_argument("--lang=ru-RU")
+    options.add_argument(
+        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Safari/537.36"
+    )
+    # ⚠️ Важно: не использовать headless, иначе Cloudflare блокирует
+    driver = uc.Chrome(options=options, version_main=120)
+    return driver
 
 
 def fetch_links_from_page(page: int) -> list[str]:
@@ -94,19 +66,18 @@ def fetch_links_from_page(page: int) -> list[str]:
                 driver.get(url)
             except (TimeoutException, WebDriverException) as e:
                 logging.warning(f"Page {page} failed to load (attempt {attempt}): {e}")
-                time.sleep(5)
                 continue
 
             try:
                 WebDriverWait(driver, 8).until(
-                    EC.presence_of_all_elements_located((By.CLASS_NAME, "AdShort_title__link__EnVP9"))
+                    EC.presence_of_all_elements_located((By.CSS_SELECTOR, "a.AdShort_title__link__EnVP9"))
                 )
             except TimeoutException:
                 logging.warning(f"Timeout waiting for links on page {page}")
                 continue
 
             soup = BeautifulSoup(driver.page_source, "html.parser")
-            link_elements = soup.find_all("a", class_="AdShort_title__link__EnVP9")
+            link_elements = soup.select("a.AdShort_title__link__EnVP9")
 
             if link_elements:
                 links = []
