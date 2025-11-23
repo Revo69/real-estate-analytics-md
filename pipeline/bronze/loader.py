@@ -23,11 +23,11 @@ DB_PATH = os.path.join("storage", "estate.db")
 
 
 def save_estate(record: dict):
-    """Save a single estate record into the raw_estate table."""
+    """Save a single estate record into the bronze_estate table."""
     with sqlite3.connect(DB_PATH) as conn:
         cur = conn.cursor()
         cur.execute("""
-            CREATE TABLE IF NOT EXISTS raw_estate (
+            CREATE TABLE IF NOT EXISTS bronze_estate (
                 id TEXT PRIMARY KEY,
                 url TEXT NOT NULL UNIQUE,
                 ad_id TEXT,
@@ -45,7 +45,7 @@ def save_estate(record: dict):
         """)
         try:
             cur.execute("""
-                INSERT OR REPLACE INTO raw_estate 
+                INSERT OR REPLACE INTO bronze_estate 
                 (id, url, ad_id, status, publication_date, user_login, deal_type, region, description,
                  price_json, main_features_json, additional_features_json)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -70,7 +70,7 @@ def save_estate(record: dict):
 
 
 def main():
-    """Load pending links from raw_links, parse them, and save into raw_estate."""
+    """Load pending links from raw_links, parse them, and save into bronze_estate."""
     with sqlite3.connect(DB_PATH) as conn:
         cur = conn.cursor()
         cur.execute("SELECT url FROM raw_links WHERE status='pending'")
