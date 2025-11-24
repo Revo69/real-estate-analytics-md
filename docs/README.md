@@ -113,16 +113,3 @@ Or let GitHub Actions run it daily via `.github/workflows/pipeline.yml`.
 
 ✅ This version makes it clear that the Gold layer is **planned but not implemented yet**, while keeping the architecture and usage instructions consistent with your current pipeline.
 
-
-
-
-
-
-
-
-
-
-
-
-
-# 🏡 Real Estate Analytics MD
