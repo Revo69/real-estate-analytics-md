@@ -6,7 +6,6 @@ import time
 from datetime import datetime
 from dotenv import load_dotenv
 from supabase import create_client, Client
-from config import DB_PATH
 from .mappings import MONTHS_MAP
 
 # Load environment variables
@@ -14,6 +13,8 @@ load_dotenv()
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+DB_PATH = os.path.join("storage", "estate.db")
 
 # Logging setup
 LOG_PATH = os.path.join("logs", "silver_loader_supabase.log")
