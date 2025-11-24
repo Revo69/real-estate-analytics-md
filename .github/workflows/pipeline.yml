@@ -33,6 +33,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      # 👉 Очистка кеша uc перед запуском
+      - name: Clear undetected_chromedriver cache
+        run: rm -rf ~/.local/share/undetected_chromedriver
+
+
       - name: Install Chrome and chromedriver
         run: |
           sudo apt-get update
