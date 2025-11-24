@@ -7,7 +7,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 from supabase import create_client, Client
 from .mappings import MONTHS_MAP
-from normalizers import (
+from pipeline.silver.normalizers import (
     normalize_number_of_rooms,
     normalize_living_room,
     normalize_area,
