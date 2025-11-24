@@ -7,6 +7,16 @@ from datetime import datetime
 from dotenv import load_dotenv
 from supabase import create_client, Client
 from .mappings import MONTHS_MAP
+from transformers import (
+    normalize_number_of_rooms,
+    normalize_living_room,
+    normalize_area,
+    normalize_int,
+    normalize_balcony,
+    normalize_date,
+    normalize_price,
+    normalize_text
+)
 
 # Load environment variables
 load_dotenv()
@@ -75,35 +85,35 @@ def transform_record(row):
         "url": url,
         "ad_id": ad_id,
         "status": status,
-        "publication_date": pub_date.isoformat() if pub_date else None,
+        "publication_date": normalize_date(pub_date),
         "user_login": user_login,
         "deal_type": deal_type,
         "region": region,
         "description": description,
 
         # Prices
-        "price_mdl": price.get("mdl"),
-        "price_eur": price.get("eur"),
-        "price_usd": price.get("usd"),
+        "price_mdl": normalize_price(price.get("mdl")),
+        "price_eur": normalize_price(price.get("eur")),
+        "price_usd": normalize_price(price.get("usd")),
 
         # Main features
-        "listing_author": main.get("listing_author"),
-        "number_of_rooms": main.get("number_of_rooms"),
-        "living_room": main.get("living_room"),
-        "total_area_m2": main.get("total_area_m2"),
-        "housing_type": main.get("housing_type"),
-        "floor": main.get("floor"),
-        "total_floors": main.get("total_floors"),
-        "developer": main.get("developer"),
-        "building_type": main.get("building_type"),
-        "apartment_condition": main.get("apartment_condition"),
-        "layout": main.get("layout"),
-        "living_area_m2": main.get("living_area_m2"),
-        "kitchen_area_m2": main.get("kitchen_area_m2"),
-        "bathroom_count": main.get("bathroom_count"),
-        "balcony_loggia": main.get("balcony_loggia"),
+        "listing_author": normalize_text(main.get("listing_author")),
+        "number_of_rooms": normalize_number_of_rooms(main.get("number_of_rooms")),
+        "living_room": normalize_living_room(main.get("living_room")),
+        "total_area_m2": normalize_area(main.get("total_area_m2")),
+        "housing_type": normalize_text(main.get("housing_type")),
+        "floor": normalize_int(main.get("floor")),
+        "total_floors": normalize_int(main.get("total_floors")),
+        "developer": normalize_text(main.get("developer")),
+        "building_type": normalize_text(main.get("building_type")),
+        "apartment_condition": normalize_text(main.get("apartment_condition")),
+        "layout": normalize_text(main.get("layout")),
+        "living_area_m2": normalize_area(main.get("living_area_m2")),
+        "kitchen_area_m2": normalize_area(main.get("kitchen_area_m2")),
+        "bathroom_count": normalize_int(main.get("bathroom_count")),
+        "balcony_loggia": normalize_balcony(main.get("balcony_loggia")),
         "ceiling_height_cm": main.get("ceiling_height_cm"),
-        "parking_space": main.get("parking_space"),
+        "parking_space": normalize_text(main.get("parking_space")),
 
         # Additional features
         "ready_to_move_in": add.get("ready_to_move_in"),
