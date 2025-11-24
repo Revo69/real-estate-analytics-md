@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS silver_estate (
     bathroom_count INTEGER,
     balcony_loggia TEXT,
     ceiling_height_cm NUMERIC,
-    parking_space BOOLEAN,
+    parking_space TEXT,
 
     -- Additional features
     ready_to_move_in BOOLEAN,
