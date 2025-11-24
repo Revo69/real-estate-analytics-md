@@ -22,7 +22,7 @@ graph TD
         B
     end
 
-    subgraph Gold Layer (Planned)
+    subgraph Gold Layer Planned
         C
         D
         E
