@@ -7,19 +7,26 @@ A modular data pipeline for collecting, transforming, and analyzing real estate 
 ## Architecture Overview
 
 ```mermaid
-flowchart LR
-    raw_links --> raw_estate
-    raw_estate --> silver_listings
-    raw_estate --> silver_main_features
-    raw_estate --> silver_additional_features
-    silver_listings & silver_main_features & silver_additional_features --> Silver
-    Silver --> gold_price_trends[price_trends<br/>(planned)]
-    Silver --> gold_region_stats[region_stats<br/>(planned)]
-    Silver --> gold_anomalies[anomaly_detection<br/>(planned)]
+flowchart TD
+    subgraph Bronze[🟤 Bronze Layer - Raw Data]
+        A[raw_links] --> B[raw_estate]
+    end
+    
+    subgraph Silver[⚪ Silver Layer - Cleaned & Structured]
+        B --> C[silver_listings]
+        B --> D[silver_main_features]
+        B --> E[silver_additional_features]
+    end
+    
+    subgraph Gold[🟡 Gold Layer - Business Metrics<br/>(Planned)]
+        C & D & E --> F[price_trends]
+        C & D & E --> G[region_stats]
+        C & D & E --> H[anomaly_detection]
+    end
 
-    class raw_links,raw_estate bronze
-    class silver_listings,silver_main_features,silver_additional_features,Silver silver
-    class gold_price_trends,gold_region_stats,gold_anomalies gold
+    class A,B bronze
+    class C,D,E silver
+    class F,G,H gold
 ```
 ---
 
