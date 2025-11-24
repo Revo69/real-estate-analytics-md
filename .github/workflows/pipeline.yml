@@ -4,7 +4,7 @@ on:
   schedule:
     - cron: '0 2 * * *'   # Run every day at 02:00 UTC
   workflow_dispatch:       # Manual trigger option
-  
+
 permissions:
   contents: write
 
@@ -33,7 +33,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # 👉 Очистка кеша uc перед запуском
       - name: Clear undetected_chromedriver cache
         run: rm -rf ~/.local/share/undetected_chromedriver
 
@@ -45,21 +44,20 @@ jobs:
       - name: 🗄️ Initialize database
         run: python scripts/init_db.py
 
-      # Run link loader in batches
       - name: 🔗 Run links loader (pages 1-100)
-        run: python pipeline/acquisition/links_loader.py --start 1 --end 100
+        run: python scripts/run_links_loader.py --start 1 --end 100
 
       - name: 🔗 Run links loader (pages 101-200)
-        run: python pipeline/acquisition/links_loader.py --start 101 --end 200
+        run: python scripts/run_links_loader.py --start 101 --end 200
 
       - name: 🔗 Run links loader (pages 201-300)
-        run: python pipeline/acquisition/links_loader.py --start 201 --end 300
+        run: python scripts/run_links_loader.py --start 201 --end 300
 
       - name: 🔗 Run links loader (pages 301-385)
-        run: python pipeline/acquisition/links_loader.py --start 301 --end 385
+        run: python scripts/run_links_loader.py --start 301 --end 385
 
-      - name: 🏠 Run bronze loader
-        run: python -m pipeline.bronze.loader
+      - name: 🏠 Run Bronze loader
+        run: python scripts/run_bronze.py
 
       - name: 📝 Commit updated DB
         run: |
@@ -70,8 +68,8 @@ jobs:
           git push
 
       - name: 🏗️ Run Silver loader
-        run: python -m pipeline.silver.loader
-     
+        run: python scripts/run_silver.py
+
       - name: 📎 Upload logs as artifacts
         uses: actions/upload-artifact@v4
         with:
