@@ -34,6 +34,18 @@ def normalize_area(value: str):
         logging.warning(f"Unexpected area: {value}")
         return None
 
+def normalize_ceiling_height(value: str):
+    """'250 см' → 250 (int)"""
+    if not value:
+        return None
+    val = value.lower().replace("см", "").strip()
+    digits = ''.join(ch for ch in val if ch.isdigit())
+    try:
+        return int(digits) if digits else None
+    except ValueError:
+        logging.warning(f"Unexpected ceiling_height: {value}")
+        return None
+
 def normalize_int(value: str):
     """'5' → 5"""
     if not value:
