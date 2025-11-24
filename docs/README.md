@@ -8,9 +8,9 @@ A modular data pipeline for collecting, transforming, and analyzing real estate 
 
 ```mermaid
 graph TD
-    A[Links Loader] --> B[Bronze Layer: bronze_estate]
-    B --> C[Silver Layer: normalized tables]
-    C --> D[Gold Layer: aggregated insights (planned)]
+    A[Links Loader] --> B[Bronze Layer (bronze_estate)]
+    B --> C[Silver Layer (normalized tables)]
+    C --> D[Gold Layer (aggregated insights, planned)]
 ```
 
 ---
