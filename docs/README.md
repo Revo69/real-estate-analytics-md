@@ -7,26 +7,19 @@ A modular data pipeline for collecting, transforming, and analyzing real estate 
 ## Architecture Overview
 
 ```mermaid
-%% dbt DAG — Bronze → Silver → Gold
-graph TD
-    A[bronze_estate - raw JSON] --> B[silver_estate - normalized tables]
-    B --> C[gold_price_trends - planned]
-    B --> D[gold_region_stats - planned]
-    B --> E[gold_anomaly_detection - planned]
+flowchart LR
+    raw_links --> raw_estate
+    raw_estate --> silver_listings
+    raw_estate --> silver_main_features
+    raw_estate --> silver_additional_features
+    silver_listings & silver_main_features & silver_additional_features --> Silver
+    Silver --> gold_price_trends[price_trends<br/>(planned)]
+    Silver --> gold_region_stats[region_stats<br/>(planned)]
+    Silver --> gold_anomalies[anomaly_detection<br/>(planned)]
 
-    subgraph Bronze Layer
-        A
-    end
-
-    subgraph Silver Layer
-        B
-    end
-
-    subgraph Gold Layer Planned
-        C
-        D
-        E
-    end
+    class raw_links,raw_estate bronze
+    class silver_listings,silver_main_features,silver_additional_features,Silver silver
+    class gold_price_trends,gold_region_stats,gold_anomalies gold
 ```
 ---
 
