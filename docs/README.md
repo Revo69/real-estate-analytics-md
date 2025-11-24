@@ -7,30 +7,30 @@ A modular data pipeline for collecting, transforming, and analyzing real estate 
 ## Architecture Overview
 
 ```mermaid
-%% Architecture Overview
+%% Real Estate Analytics MD — Architecture Overview
 graph TD
-    subgraph "Acquisition"
-        A[Links Collector / Scraper] --> B[Raw Links Queue]
+    subgraph Acquisition 🕸️
+        A[🔗 Links Collector / Scraper] --> B[📂 Raw Links Queue]
     end
 
-    subgraph "Bronze Layer"
-        B --> C[Bronze Loader]
-        C --> D[bronze_estate<br/>Raw structured data<br/>SQLite estate.db]
+    subgraph Bronze Layer 🟤
+        B --> C[⚙️ Bronze Loader]
+        C --> D[📦 bronze_estate · Raw structured data · SQLite estate.db]
     end
 
-    subgraph "Silver Layer"
-        D --> E[Silver Transformer + Loader<br/>silver/transformers.py<br/>silver/loader.py]
-        E --> F[silver_estate<br/>Clean normalized tables<br/>Supabase PostgreSQL]
+    subgraph Silver Layer ⚪
+        D --> E[⚙️ Silver Transformer + Loader · transformers.py + loader.py]
+        E --> F[📊 silver_estate · Clean normalized tables · Supabase PostgreSQL]
     end
 
-    subgraph "Gold Layer — Planned"
-        F --> G[Aggregations & Metrics<br/>Price trends<br/>Stats by region<br/>Anomaly detection]
+    subgraph Gold Layer (Planned) 🟡
+        F --> G[📈 Aggregations & Metrics · Price trends · Regional stats · Anomaly detection]
     end
 
-    subgraph "Analytics & Consumption"
-        F --> H[Dashboards<br/>Metabase · Streamlit · Looker Studio]
+    subgraph Analytics & Consumption 📊
+        F --> H[📉 Dashboards · Metabase · Streamlit · Looker Studio]
         G --> H
-        F --> I[Ad-hoc Analysis<br/>Jupyter · Pandas · SQL clients]
+        F --> I[🔍 Ad-hoc Analysis · Jupyter · Pandas · SQL clients]
         G --> I
     end
 
