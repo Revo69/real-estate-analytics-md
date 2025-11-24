@@ -68,12 +68,14 @@ def transform_record(row):
     main = safe_json_loads(main_features_json)
     add = safe_json_loads(additional_features_json)
 
+    pub_date = parse_publication_date(publication_date)
+    
     return {
         "id": id,
         "url": url,
         "ad_id": ad_id,
         "status": status,
-        "publication_date": parse_publication_date(publication_date),
+        "publication_date": pub_date.isoformat() if pub_date else None,
         "user_login": user_login,
         "deal_type": deal_type,
         "region": region,
