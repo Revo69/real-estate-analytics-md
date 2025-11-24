@@ -6,28 +6,7 @@ A modular data pipeline for collecting, transforming, and analyzing real estate 
 
 ## Architecture Overview
 
-```mermaid
-flowchart TD
-    subgraph Bronze[🟤 Bronze Layer - Raw Data]
-        A[raw_links] --> B[raw_estate]
-    end
-    
-    subgraph Silver[⚪ Silver Layer - Cleaned & Structured]
-        B --> C[silver_listings]
-        B --> D[silver_main_features]
-        B --> E[silver_additional_features]
-    end
-    
-    subgraph Gold[🟡 Gold Layer - Business Metrics]
-        C & D & E --> F[price_trends]
-        C & D & E --> G[region_stats]
-        C & D & E --> H[anomaly_detection]
-    end
 
-    class A,B bronze
-    class C,D,E silver
-    class F,G,H gold
-```
 ---
 
 ## 🟤 Bronze Layer: Structured JSON
