@@ -37,10 +37,10 @@ jobs:
       - name: Clear undetected_chromedriver cache
         run: rm -rf ~/.local/share/undetected_chromedriver
 
-      - name: Install Chrome and chromedriver
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y chromium-browser chromium-chromedriver
+      #- name: Install Chrome and chromedriver
+      #  run: |
+      #    sudo apt-get update
+      #    sudo apt-get install -y chromium-browser chromium-chromedriver
 
       #- name: 🗄️ Initialize database
       #  run: python scripts/init_db.py
