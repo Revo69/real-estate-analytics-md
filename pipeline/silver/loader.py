@@ -11,7 +11,7 @@ from transformers import (
     normalize_number_of_rooms,
     normalize_living_room,
     normalize_area,
-    normalize_ceiling_height
+    normalize_ceiling_height,
     normalize_int,
     normalize_balcony,
     normalize_date,
