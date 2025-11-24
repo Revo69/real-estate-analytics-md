@@ -12,6 +12,17 @@ def normalize_number_of_rooms(value: str):
         logging.warning(f"Unexpected number_of_rooms: {value}")
         return None
 
+def normalize_living_room(value: str):
+    """'Квартира с ливингом' → True, 'Квартира без ливинга' → False"""
+    if not value:
+        return None
+    val = value.lower()
+    if "без" in val:
+        return False
+    if "с " in val:
+        return True
+    return None
+
 def normalize_area(value: str):
     """'22 м²' → 22.0"""
     if not value:
@@ -32,18 +43,17 @@ def normalize_int(value: str):
     except (TypeError, ValueError):
         return None
 
-def normalize_living_room(value: str):
-    """'Квартира с ливингом' → True, 'Квартира без ливинга' → False"""
+def normalize_balcony(value: str):
+    """'Нет' → 0, '1' → 1"""
     if not value:
         return None
     val = value.lower()
-    if "без" in val:
-        return False
-    if "с " in val:
-        return True
-    return None
+    if val in ["нет", "none", "no"]:
+        return 0
+    digits = ''.join(ch for ch in value if ch.isdigit())
+    return int(digits) if digits else None
 
-def normalize_date(value: datetime.date | datetime.datetime | str):
+def normalize_date(value):
     """Convert date/datetime to ISO string"""
     if not value:
         return None
@@ -52,6 +62,15 @@ def normalize_date(value: datetime.date | datetime.datetime | str):
     if isinstance(value, str):
         return value.strip()
     return None
+
+def normalize_price(value):
+    """Ensure price is numeric or None"""
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 def normalize_text(value: str):
     """Return stripped text or None"""
