@@ -37,7 +37,6 @@ jobs:
       - name: Clear undetected_chromedriver cache
         run: rm -rf ~/.local/share/undetected_chromedriver
 
-
       - name: Install Chrome and chromedriver
         run: |
           sudo apt-get update
@@ -71,7 +70,7 @@ jobs:
           git push
 
       - name: 🏗️ Run Silver loader
-        run: python pipeline/silver/loader.py
+        run: python -m pipeline.silver.loader
      
       - name: 📎 Upload logs as artifacts
         uses: actions/upload-artifact@v4
