@@ -58,7 +58,7 @@ def safe_json_loads(raw: str):
         return {}
 
 def transform_record(row):
-    """Transform raw_estate row into silver_estate payload for Supabase."""
+    """Transform bronze_estate row into silver_estate payload for Supabase."""
     (
         id, url, ad_id, status, publication_date, user_login, deal_type,
         region, description, price_json, main_features_json, additional_features_json
@@ -154,7 +154,7 @@ def main():
         cur.execute("""
             SELECT id, url, ad_id, status, publication_date, user_login, deal_type, region, description,
                    price_json, main_features_json, additional_features_json
-            FROM raw_estate
+            FROM bronze_estate
         """)
         rows = cur.fetchall()
 
