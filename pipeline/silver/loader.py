@@ -19,6 +19,11 @@ from pipeline.silver.normalizers import (
     normalize_text
 )
 
+from pipeline.silver.quality import (
+    calculate_quality_score,
+    assign_status
+)
+
 # Load environment variables
 load_dotenv()
 SUPABASE_URL = os.getenv("SUPABASE_URL")
@@ -81,7 +86,7 @@ def transform_record(row):
 
     pub_date = parse_publication_date(publication_date)
     
-    return {
+    record = {
         "id": id,
         "url": url,
         "ad_id": ad_id,
@@ -142,6 +147,15 @@ def transform_record(row):
         "elevator": add.get("elevator"),
         "playground": add.get("playground"),
     }
+
+    # 🔑 Quality score
+    score = calculate_quality_score(record)
+    record["quality_score"] = score
+    record["normalization_status"] = assign_status(score)
+
+    return record
+
+
 
 def batch_upload(records, batch_size=100):
     """Upload records to Supabase in batches with logging statistics."""
