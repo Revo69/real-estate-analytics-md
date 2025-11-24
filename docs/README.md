@@ -8,10 +8,9 @@ A modular data pipeline for collecting, transforming, and analyzing real estate 
 
 ```mermaid
 graph TD
-    A[Links Loader] --> B[Parser]
-    B --> C[Bronze Layer: raw_estate]
-    C --> D[Silver Layer: normalized tables]
-    D --> E[Gold Layer: aggregated insights]
+    A[Links Loader] --> B[Bronze Layer: bronze_estate]
+    B --> C[Silver Layer: normalized tables]
+    C --> D[Gold Layer: aggregated insights (planned)]
 ```
 
 ---
@@ -20,9 +19,9 @@ graph TD
 
 Unlike traditional bronze layers that store raw HTML or unprocessed data, this project stores **pre-parsed structured JSON** extracted from HTML listings. This ensures:
 
-- ✅ No loss of semantic information
-- ✅ Easier debugging and reproducibility
-- ✅ Ready for downstream normalization
+- ✅ No loss of semantic information  
+- ✅ Easier debugging and reproducibility  
+- ✅ Ready for downstream normalization  
 
 Example record in `raw_estate`:
 
@@ -41,11 +40,12 @@ Example record in `raw_estate`:
 
 ## ⚙️ Technologies
 
-- Python 3.11
-- SQLite
-- GitHub Actions (CI + orchestration)
-- Modular ETL structure (bronze/silver/gold)
-- Jupyter notebooks for analysis
+- Python 3.11  
+- SQLite  
+- Supabase (Silver layer storage)  
+- GitHub Actions (CI/CD orchestration)  
+- Modular ETL structure (Bronze/Silver/Gold)  
+- Jupyter notebooks for analysis  
 
 ---
 
@@ -56,7 +56,7 @@ Example record in `raw_estate`:
 python scripts/run_links_loader.py
 python scripts/run_bronze.py
 python scripts/run_silver.py
-python scripts/run_gold.py
+# Gold layer is not yet implemented
 ```
 
 Or let GitHub Actions run it daily via `.github/workflows/pipeline.yml`.
@@ -65,15 +65,32 @@ Or let GitHub Actions run it daily via `.github/workflows/pipeline.yml`.
 
 ## 📊 Notebooks
 
-- `price_analysis.ipynb`: price trends by region
-- `region_distribution.ipynb`: listing density
-- `feature_quality_check.ipynb`: data completeness
+- `price_analysis.ipynb`: price trends by region  
+- `region_distribution.ipynb`: listing density  
+- `feature_quality_check.ipynb`: data completeness  
 
 ---
 
 ## 📁 Data Storage
 
-- `storage/estate.db`: SQLite database with all layers
-- `raw_links`: deduplicated queue of listing URLs
-- `raw_estate`: structured JSON records
-```
+- `storage/estate.db`: SQLite database containing Bronze and Silver layers  
+- `raw_links`: deduplicated queue of listing URLs  
+- `bronze_estate`: structured JSON records  
+
+---
+
+✅ This version makes it clear that the Gold layer is **planned but not implemented yet**, while keeping the architecture and usage instructions consistent with your current pipeline.
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 🏡 Real Estate Analytics MD
