@@ -9,10 +9,10 @@ A modular data pipeline for collecting, transforming, and analyzing real estate 
 ```mermaid
 %% dbt DAG — Bronze → Silver → Gold
 graph TD
-    A[bronze_estate (raw JSON)] --> B[silver_estate (normalized tables)]
-    B --> C[gold_price_trends (planned)]
-    B --> D[gold_region_stats (planned)]
-    B --> E[gold_anomaly_detection (planned)]
+    A[bronze_estate - raw JSON] --> B[silver_estate - normalized tables]
+    B --> C[gold_price_trends - planned]
+    B --> D[gold_region_stats - planned]
+    B --> E[gold_anomaly_detection - planned]
 
     subgraph Bronze Layer
         A
