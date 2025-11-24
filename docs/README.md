@@ -8,27 +8,40 @@ A modular data pipeline for collecting, transforming, and analyzing real estate 
 
 ```mermaid
 graph TD
-    subgraph Acquisition
-        A[Links Loader] --> B[Raw Links Queue]
+    subgraph "Acquisition"
+        A[Links Collector / Scraper] --> B[Raw Links Queue]
     end
 
-    subgraph Bronze
+    subgraph "Bronze Layer"
         B --> C[Bronze Loader]
-        C --> D[bronze_estate (structured JSON)]
+        C --> D[bronze_estate<br/>Raw structured data<br/>SQLite (estate.db)]
     end
 
-    subgraph Silver
-        D --> E[Silver Loader]
-        E --> F[silver_estate (normalized tables in Supabase)]
+    subgraph "Silver Layer"
+        D --> E[Silver Transformer + Loader<br/>(silver/transformers.py<br/>+ silver/loader.py)]
+        E --> F[silver_estate<br/>Clean, normalized tables<br/>Supabase (PostgreSQL)]
     end
 
-    subgraph Gold
-        F --> G[Gold Layer (aggregated insights, planned)]
+    subgraph "Gold Layer (Planned)"
+        F --> G[Aggregations & Business Metrics<br/>price trends, stats by region,<br/>anomaly detection, etc.]
     end
 
-    subgraph Analytics
-        G --> H[Jupyter Notebooks & Dashboards]
+    subgraph "Analytics & Consumption"
+        F --> H[Dashboards<br/>Metabase / Streamlit / Looker Studio]
+        G --> H
+        F --> I[Ad-hoc Analysis<br/>Jupyter / Pandas / DB clients]
+        G --> I
     end
+
+    classDef bronze fill:#8B4513,color:white,stroke:#333
+    classDef silver fill:#C0C0C0,color:black,stroke:#333
+    classDef gold fill:#FFD700,color:black,stroke:#333
+    classDef analytics fill:#E3F2FD,color:black,stroke:#1976D2
+
+    class D bronze
+    class F silver
+    class G gold
+    class H,I analytics
 
 ```
 
