@@ -9,7 +9,7 @@ A modular data pipeline for collecting, transforming, and analyzing real estate 
 ```mermaid
 flowchart TD
     subgraph Bronze[🟤 Bronze Layer - Raw Data]
-        A[raw_links] --> B[raw_estate]
+        A[raw_links] --> B[bronze_estate]
     end
     
     subgraph Silver[⚪ Silver Layer - Cleaned & Structured]
