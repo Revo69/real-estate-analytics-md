@@ -7,37 +7,38 @@ A modular data pipeline for collecting, transforming, and analyzing real estate 
 ## Architecture Overview
 
 ```mermaid
-%% Real Estate Analytics MD — Architecture Overview
+%% Real Estate Analytics — Architecture Overview
 graph TD
-    subgraph Acquisition
-        A[Links Collector / Scraper] --> B[Raw Links Queue]
+    subgraph "Acquisition"
+        A[Links Collector<br/>Scraper] --> B[Raw Links Queue]
     end
 
-    subgraph Bronze Layer
+    subgraph "Bronze Layer"
         B --> C[Bronze Loader]
-        C --> D[bronze_estate · Raw structured data · SQLite estate.db]
+        C --> D[bronze_estate<br/>Raw structured data<br/>SQLite estate.db]
     end
 
-    subgraph Silver Layer
-        D --> E[Silver Transformer + Loader · transformers.py + loader.py]
-        E --> F[silver_estate · Clean normalized tables · Supabase PostgreSQL]
+    subgraph "Silver Layer"
+        D --> E[Silver Transformer + Loader<br/>silver/transformers.py<br/>silver/loader.py]
+        E --> F[silver_estate<br/>Clean & normalized data<br/>Supabase PostgreSQL]
     end
 
-    subgraph Gold Layer (Planned)
-        F --> G[Aggregations & Metrics · Price trends · Regional stats · Anomaly detection]
+    subgraph "Gold Layer — Planned"
+        F --> G[Aggregations & Business Metrics<br/>Price trends<br/>Stats by region<br/>Anomaly detection]
     end
 
-    subgraph Analytics & Consumption
-        F --> H[Dashboards · Metabase · Streamlit · Looker Studio]
+    subgraph "Analytics & Consumption"
+        F --> H[Dashboards<br/>Metabase • Streamlit • Looker Studio]
         G --> H
-        F --> I[Ad-hoc Analysis · Jupyter · Pandas · SQL clients]
+        F --> I[Ad-hoc Analysis<br/>Jupyter • Pandas • SQL clients]
         G --> I
     end
 
-    classDef bronze fill:#8B4513,color:white,stroke:#333
-    classDef silver fill:#C0C0C0,color:black,stroke:#333
-    classDef gold fill:#FFD700,color:black,stroke:#333
-    classDef analytics fill:#E3F2FD,color:black,stroke:#1976D2
+    %% Styles
+    classDef bronze    fill:#8B4513, color:#fff, stroke:#333
+    classDef silver    fill:#C0C0C0, color:#000, stroke:#333
+    classDef gold      fill:#FFD700, color:#000, stroke:#333
+    classDef analytics fill:#E3F2FD, color:#1976D2, stroke:#1976D2
 
     class D bronze
     class F silver
