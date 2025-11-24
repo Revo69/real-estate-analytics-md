@@ -37,37 +37,37 @@ jobs:
       - name: Clear undetected_chromedriver cache
         run: rm -rf ~/.local/share/undetected_chromedriver
 
-      #- name: Install Chrome and chromedriver
-      #  run: |
-      #    sudo apt-get update
-      #    sudo apt-get install -y chromium-browser chromium-chromedriver
+      - name: Install Chrome and chromedriver
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chromium-browser chromium-chromedriver
 
-      #- name: 🗄️ Initialize database
-      #  run: python scripts/init_db.py
+      - name: 🗄️ Initialize database
+        run: python scripts/init_db.py
 
       # Run link loader in batches
-      #- name: 🔗 Run links loader (pages 1-100)
-      #  run: python pipeline/acquisition/links_loader.py --start 1 --end 2
+      - name: 🔗 Run links loader (pages 1-100)
+        run: python pipeline/acquisition/links_loader.py --start 1 --end 100
 
-      #- name: 🔗 Run links loader (pages 101-200)
-      #  run: python pipeline/acquisition/links_loader.py --start 101 --end 200
+      - name: 🔗 Run links loader (pages 101-200)
+        run: python pipeline/acquisition/links_loader.py --start 101 --end 200
 
-      #- name: 🔗 Run links loader (pages 201-300)
-      #  run: python pipeline/acquisition/links_loader.py --start 201 --end 300
+      - name: 🔗 Run links loader (pages 201-300)
+        run: python pipeline/acquisition/links_loader.py --start 201 --end 300
 
-      #- name: 🔗 Run links loader (pages 301-385)
-      #  run: python pipeline/acquisition/links_loader.py --start 301 --end 385
+      - name: 🔗 Run links loader (pages 301-385)
+        run: python pipeline/acquisition/links_loader.py --start 301 --end 385
 
-      #- name: 🏠 Run bronze loader
-      #  run: python -m pipeline.bronze.loader
+      - name: 🏠 Run bronze loader
+        run: python -m pipeline.bronze.loader
 
-      #- name: 📝 Commit updated DB
-      #  run: |
-      #    git config --global user.name "github-actions[bot]"
-      #    git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-      #    git add storage/estate.db
-      #    git commit -m "Update DB after pipeline run" || echo "No changes to commit"
-      #    git push
+      - name: 📝 Commit updated DB
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add storage/estate.db
+          git commit -m "Update DB after pipeline run" || echo "No changes to commit"
+          git push
 
       - name: 🏗️ Run Silver loader
         run: python -m pipeline.silver.loader
