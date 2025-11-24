@@ -7,7 +7,7 @@ A modular data pipeline for collecting, transforming, and analyzing real estate 
 ## Architecture Overview
 
 ```mermaid
-%% Real Estate Analytics — Architecture Overview
+%% Real Estate Analytics - Architecture Overview
 graph TD
     subgraph "Acquisition"
         A[Links Collector<br/>Scraper] --> B[Raw Links Queue]
@@ -23,7 +23,7 @@ graph TD
         E --> F[silver_estate<br/>Clean & normalized data<br/>Supabase PostgreSQL]
     end
 
-    subgraph "Gold Layer — Planned"
+    subgraph "Gold Layer - Planned"
         F --> G[Aggregations & Business Metrics<br/>Price trends<br/>Stats by region<br/>Anomaly detection]
     end
 
