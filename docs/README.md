@@ -4,9 +4,10 @@ A modular data pipeline for collecting, transforming, and analyzing real estate 
 
 ---
 
-## 🧱 Architecture Overview
+## Architecture Overview
 
 ```mermaid
+%% Architecture Overview
 graph TD
     subgraph "Acquisition"
         A[Links Collector / Scraper] --> B[Raw Links Queue]
@@ -14,22 +15,22 @@ graph TD
 
     subgraph "Bronze Layer"
         B --> C[Bronze Loader]
-        C --> D[bronze_estate<br/>Raw structured data<br/>SQLite (estate.db)]
+        C --> D[bronze_estate<br/>Raw structured data<br/>SQLite estate.db]
     end
 
     subgraph "Silver Layer"
-        D --> E[Silver Transformer + Loader<br/>(silver/transformers.py<br/>+ silver/loader.py)]
-        E --> F[silver_estate<br/>Clean, normalized tables<br/>Supabase (PostgreSQL)]
+        D --> E[Silver Transformer + Loader<br/>silver/transformers.py<br/>silver/loader.py]
+        E --> F[silver_estate<br/>Clean normalized tables<br/>Supabase PostgreSQL]
     end
 
-    subgraph "Gold Layer (Planned)"
-        F --> G[Aggregations & Business Metrics<br/>price trends, stats by region,<br/>anomaly detection, etc.]
+    subgraph "Gold Layer — Planned"
+        F --> G[Aggregations & Metrics<br/>Price trends<br/>Stats by region<br/>Anomaly detection]
     end
 
     subgraph "Analytics & Consumption"
-        F --> H[Dashboards<br/>Metabase / Streamlit / Looker Studio]
+        F --> H[Dashboards<br/>Metabase · Streamlit · Looker Studio]
         G --> H
-        F --> I[Ad-hoc Analysis<br/>Jupyter / Pandas / DB clients]
+        F --> I[Ad-hoc Analysis<br/>Jupyter · Pandas · SQL clients]
         G --> I
     end
 
@@ -42,8 +43,6 @@ graph TD
     class F silver
     class G gold
     class H,I analytics
-
-```
 
 ---
 
