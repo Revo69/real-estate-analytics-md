@@ -43,7 +43,7 @@ graph TD
     class F silver
     class G gold
     class H,I analytics
-
+```
 ---
 
 ## 🟤 Bronze Layer: Structured JSON
