@@ -18,7 +18,7 @@ flowchart TD
         B --> E[silver_additional_features]
     end
     
-    subgraph Gold[🟡 Gold Layer - Business Metrics\n(Planned)]
+    subgraph Gold[🟡 Gold Layer - Business Metrics (Planned)]
         C & D & E --> F[price_trends]
         C & D & E --> G[region_stats]
         C & D & E --> H[anomaly_detection]
