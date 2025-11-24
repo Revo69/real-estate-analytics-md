@@ -8,9 +8,28 @@ A modular data pipeline for collecting, transforming, and analyzing real estate 
 
 ```mermaid
 graph TD
-    A[Links Loader] --> B[Bronze Layer]
-    B --> C[Silver Layer]
-    C --> D[Gold Layer]
+    subgraph Acquisition
+        A[Links Loader] --> B[Raw Links Queue]
+    end
+
+    subgraph Bronze
+        B --> C[Bronze Loader]
+        C --> D[bronze_estate (structured JSON)]
+    end
+
+    subgraph Silver
+        D --> E[Silver Loader]
+        E --> F[silver_estate (normalized tables in Supabase)]
+    end
+
+    subgraph Gold
+        F --> G[Gold Layer (aggregated insights, planned)]
+    end
+
+    subgraph Analytics
+        G --> H[Jupyter Notebooks & Dashboards]
+    end
+
 ```
 
 ---
