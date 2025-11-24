@@ -11,6 +11,7 @@ from transformers import (
     normalize_number_of_rooms,
     normalize_living_room,
     normalize_area,
+    normalize_ceiling_height
     normalize_int,
     normalize_balcony,
     normalize_date,
@@ -112,7 +113,7 @@ def transform_record(row):
         "kitchen_area_m2": normalize_area(main.get("kitchen_area_m2")),
         "bathroom_count": normalize_int(main.get("bathroom_count")),
         "balcony_loggia": normalize_balcony(main.get("balcony_loggia")),
-        "ceiling_height_cm": main.get("ceiling_height_cm"),
+        "ceiling_height_cm": normalize_ceiling_height(main.get("ceiling_height_cm")),
         "parking_space": normalize_text(main.get("parking_space")),
 
         # Additional features
