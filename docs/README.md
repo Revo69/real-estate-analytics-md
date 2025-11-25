@@ -47,9 +47,9 @@ graph TD
 ```
 ```mermaid
 flowchart LR
-    A[Raw Links\n(raw_links queue)] --> B[Bronze Layer\nbronze_estate (SQLite)]
-    B --> C[Silver Layer\nsilver_estate (Supabase/Postgres)]
-    C --> D[Gold Layer\nanalytics-ready datasets\n(not yet implemented)]
+    A[Raw Links<br/>raw_links queue] --> B[Bronze Layer<br/>bronze_estate]
+    B --> C[Silver Layer<br/>silver_estate]
+    C --> D[Gold Layer<br/>analytics-ready datasets]
 
     subgraph Bronze
         B
