@@ -54,6 +54,17 @@ graph TD
 
 ---
 
+### Layer Overview
+
+| Layer   | Purpose                                                                 | Storage                  |
+|---------|-------------------------------------------------------------------------|--------------------------|
+| Raw     | Deduplicated queue of listing URLs for acquisition                      | `raw_links` (files/queue)|
+| Bronze  | Parsed listings with structured fields + embedded JSON (prices, features)| `bronze_estate` (SQLite) |
+| Silver  | Normalized records for analytics and dashboards                         | `silver_estate` (Supabase/Postgres) |
+| Gold    | Aggregated, analytics‑ready datasets (KPIs, trends, predictive models)  | Planned (future)         |
+
+---
+
 ## 🟤 Bronze Layer: Parsed Listings Table
 
 Instead of storing raw HTML pages, the Bronze layer in this project captures **already parsed listings** in the relational table `bronze_estate`. Each record includes:
