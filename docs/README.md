@@ -48,48 +48,65 @@ graph TD
 
 ---
 
-## 🟤 Bronze Layer: Raw Structured Data
+## 🟤 Bronze Layer: Parsed Listings Table
 
-The Bronze layer stores **structured but unnormalized data** directly extracted from 999.md listings.  
-Instead of keeping raw HTML (which is fragile and hard to query), we immediately parse the page and save all fields as structured text/JSON — preserving 100% of the original information while making it instantly queryable.
+Instead of storing raw HTML pages, the Bronze layer in this project captures **already parsed listings** in the relational table `bronze_estate`. Each record includes:
 
-### Table: `bronze_estate` (SQLite → `storage/estate.db`)
+- 🔑 **id** — unique UUID  
+- 🌐 **url** — link to the original listing  
+- 🆔 **ad_id** — listing identifier on the platform  
+- 📊 **status** — processing result (`success` / `error`)  
+- 📅 **publication_date** — publication or update date  
+- 👤 **user_login** — listing author  
+- 📑 **deal_type** — type of deal (sale, rent, etc.)  
+- 🗺️ **region** — region/address  
+- 📝 **description** — textual description  
+- 💰 **price_json** — JSON with prices in multiple currencies (`mdl`, `eur`, `usd`)  
+- 🏠 **main_features_json** — JSON with main property features (rooms, floor, condition, etc.)  
+- ➕ **additional_features_json** — JSON with extra options (heating, elevator, security, etc.)  
+- ⏱️ **created_at** — timestamp when the record was inserted  
 
-| Column                    | Type        | Description                                                                 |
-|---------------------------|-------------|-----------------------------------------------------------------------------|
-| `id`                      | TEXT PK     | UUID for internal deduplication                                            |
-| `url`                     | TEXT UNIQUE | Full URL of the listing (e.g. `https://999.md/ru/100011729`)                |
-| `ad_id`                   | TEXT        | Original 999.md ad identifier                                              |
-| `status`                  | TEXT        | `success` / `error`                                                         |
-| `publication_date`        | TEXT        | Raw string like `Дата обновления:24 ноя. 2025, 14:45`                        |
-| `user_login`              | TEXT        | Seller/agent username                                                       |
-| `deal_type`               | TEXT        | "Продам" / "Сдаю посуточно" etc.                                            |
-| `region`                  | TEXT        | Region (e.g. `Кишинёв мун., Центр`)                                         |
-| `description`             | TEXT        | Full ad text                                                                |
-| `price_json`              | TEXT (JSON) | `{"mdl": 1200, "eur": 77000, "usd": null}` — extracted prices               |
-| `main_features_json`      | TEXT (JSON) | Raw main characteristics (rooms, floor, area, etc.)                         |
-| `additional_features_json`| TEXT (JSON) | Raw boolean flags (elevator, autonomous heating, etc.)                      |
-| `created_at`              | TIMESTAMP   | When the record was ingested                                                |
+This design ensures:
 
-### Example real record (as stored in Bronze)
+- ✅ Semantic information is preserved without loss  
+- ✅ Flexible downstream normalization and analytics  
+- ✅ Easy debugging and reproducibility  
+
+### Example record in `bronze_estate`
 
 ```json
 {
-  "id": "473f33f2-f600-430a-9614-db143a652255",
-  "url": "https://999.md/ru/100011729",
-  "ad_id": "100011729",
+  "id": "ad5898ad-38ac-4fec-964a-a4e59c717fd5",
+  "url": "https://999.md/ru/100040456",
+  "ad_id": "100040456",
   "status": "success",
-  "publication_date": "Дата обновления:24 ноя. 2025, 14:45",
-  "user_login": "69719119",
-  "deal_type": "Сдаю посуточно",
-  "region": "Кишинёв мун., Кишинёв, Центр, str. Ismail, 88",
-  "description": "Кишинев, str. Izmail 88( центр, кафе \" PizzaMania \" )квартира на 4 персоны...",
-  "price_json": "{\"mdl\": 1200, \"eur\": null, \"usd\": null}",
-  "main_features_json": "{\"listing_author\": \"Застройщик\", \"number_of_rooms\": \"2-х комнатная квартира\", \"floor\": \"5\", \"total_floors\": \"11\"}",
-  "additional_features_json": "{}",
-  "created_at": "2025-11-24 12:54:40"
+  "publication_date": "Updated: Nov 24, 2025, 14:40",
+  "user_login": "Mirax",
+  "deal_type": "Sale",
+  "region": "Chișinău mun., Durlești, Center, str. Alexandr Orlov",
+  "description": "One-bedroom apartment with living room in Colina Verde Residence, Durlești...",
+  "price_json": {"mdl": null, "eur": 77000, "usd": null},
+  "main_features_json": {
+    "listing_author": "Agency",
+    "number_of_rooms": "1-room apartment",
+    "housing_type": "New building",
+    "floor": "3",
+    "total_floors": "8",
+    "apartment_condition": "Shell condition"
+  },
+  "additional_features_json": {
+    "autonomous_heating": true,
+    "double_glazing": true,
+    "security_door": true,
+    "intercom": true,
+    "video_surveillance": true,
+    "elevator": true,
+    "playground": true
+  },
+  "created_at": "2025-11-24 12:54:41"
 }
 ```
+
 ---
 
 ## ⚙️ Technologies
