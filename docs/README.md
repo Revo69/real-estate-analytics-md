@@ -10,7 +10,7 @@ A modular data pipeline for collecting, transforming, and analyzing real estate 
 %% Real Estate Analytics — Architecture Overview
 graph TD
     subgraph "Acquisition"
-        A[Links Collector<br/>Scraper] --> B[Raw Links Queue]
+        A[Links Collector<br/>Scraper] --> B[Raw Links <br/>SQLite]
     end
 
     subgraph "Bronze Layer"
