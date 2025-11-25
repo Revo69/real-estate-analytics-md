@@ -26,23 +26,10 @@ jobs:
       - name: Clear undetected_chromedriver cache
         run: rm -rf ~/.local/share/undetected_chromedriver
 
-      - name: Install Google Chrome + matching ChromeDriver
-        run: |
-          wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-          echo "deb [arch=amd64 https://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
-          sudo apt-get update -qq
-          sudo apt-get install -y google-chrome-stable
-      
-          # Узнаём версию установленного Chrome
-          CHROME_VERSION=$(google-chrome --version | grep -oE "[0-9]+\.[0-9]+\.[0-9]+")
-          echo "Chrome version: $CHROME_VERSION"
-      
-          # Ставим точно такой же ChromeDriver
-          DRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION%%.*}")
-          wget -q https://chromedriver.storage.googleapis.com/${DRIVER_VERSION}/chromedriver_linux64.zip
-          unzip chromedriver_linux64.zip
-          sudo mv chromedriver /usr/local/bin/chromedriver
-          sudo chmod +x /usr/local/bin/chromedriver
+      - name: Setup Chrome + Driver 
+        uses: browser-actions/setup-chrome@v1 
+      - name: Setup ChromeDriver 
+        uses: nanasess/setup-chromedriver@v2
 
       - name: 🗄️ Initialize DB
         run: python -m scripts.init_db
