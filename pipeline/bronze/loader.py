@@ -21,28 +21,10 @@ logging.basicConfig(
 
 DB_PATH = os.path.join("storage", "estate.db")
 
-
 def save_estate(record: dict):
     """Save a single estate record into the bronze_estate table."""
     with sqlite3.connect(DB_PATH) as conn:
         cur = conn.cursor()
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS bronze_estate (
-                id TEXT PRIMARY KEY,
-                url TEXT NOT NULL UNIQUE,
-                ad_id TEXT,
-                status TEXT,
-                publication_date TEXT,
-                user_login TEXT,
-                deal_type TEXT,
-                region TEXT,
-                description TEXT,
-                price_json TEXT,
-                main_features_json TEXT,
-                additional_features_json TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
         try:
             cur.execute("""
                 INSERT OR REPLACE INTO bronze_estate 
@@ -65,9 +47,8 @@ def save_estate(record: dict):
             ))
             conn.commit()
             logging.info(f"Saved estate record: {record.get('url')}")
-        except Exception as e:
-            logging.error(f"Failed to save estate record {record.get('url')}: {e}")
-
+        except sqlite3.OperationalError as e:
+            logging.error(f"Table bronze_estate not found. Did you run init_db? Error: {e}")
 
 def main():
     """Load pending links from raw_links, parse them, and save into bronze_estate."""
