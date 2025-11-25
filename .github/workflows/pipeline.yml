@@ -23,18 +23,10 @@ jobs:
       - name: 📦 Install dependencies
         run: pip install -r requirements.txt
 
-      - name: 🌐 Setup Chromium once
+      - name: 🌐 Install Chromium + Chromedriver
         run: |
-          sudo snap install chromium
-          sudo snap connect chromium:network
-          sudo snap connect chromium:network-bind
-          sudo snap connect chromium:browser-sandbox
-          sudo snap connect chromium:opengl
-          sudo snap connect chromium:audio-playback
-          sudo snap connect chromium:camera
-          sudo snap connect chromium:mount-observe
-          sudo snap connect chromium:password-manager-service
-          sudo snap connect chromium:system-observe
+          sudo apt-get update -qq
+          sudo apt-get install -y chromium-browser chromium-chromedriver
 
       - name: 🗄️ Initialize DB
         run: python -m scripts.init_db
