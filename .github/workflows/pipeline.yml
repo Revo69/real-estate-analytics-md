@@ -42,22 +42,22 @@ jobs:
           sudo apt-get install -y chromium-browser chromium-chromedriver
 
       - name: 🗄️ Initialize database
-        run: python scripts/init_db.py
+        run: python -m scripts.init_db
 
       - name: 🔗 Run links loader (pages 1-100)
-        run: python scripts/run_links_loader.py --start 1 --end 100
+        run: python -m scripts.run_links_loader --start 1 --end 100
 
       - name: 🔗 Run links loader (pages 101-200)
-        run: python scripts/run_links_loader.py --start 101 --end 200
+        run: python -m scripts.run_links_loader --start 101 --end 200
 
       - name: 🔗 Run links loader (pages 201-300)
-        run: python scripts/run_links_loader.py --start 201 --end 300
+        run: python -m scripts.run_links_loader --start 201 --end 300
 
       - name: 🔗 Run links loader (pages 301-385)
-        run: python scripts/run_links_loader.py --start 301 --end 385
+        run: python -m scripts.run_links_loader --start 301 --end 385
 
       - name: 🏠 Run Bronze loader
-        run: python scripts/run_bronze.py
+        run: python -m scripts.run_bronze
 
       - name: 📝 Commit updated DB
         run: |
@@ -68,7 +68,7 @@ jobs:
           git push
 
       - name: 🏗️ Run Silver loader
-        run: python scripts/run_silver.py
+        run: python -m scripts.run_silver
 
       - name: 📎 Upload logs as artifacts
         uses: actions/upload-artifact@v4
