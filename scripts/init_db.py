@@ -6,7 +6,7 @@ BASE_DIR = os.path.dirname(__file__)  # path to scripts/
 DB_PATH = os.path.join("storage", "estate.db")
 
 SCHEMA_PATHS = [
-    os.path.abspath(os.path.join(BASE_DIR, "..", "pipeline", "acquisition", "schema.sql"))
+    os.path.abspath(os.path.join(BASE_DIR, "..", "pipeline", "acquisition", "schema.sql")),
     os.path.abspath(os.path.join(BASE_DIR, "..", "pipeline", "bronze", "schema.sql")),
 ]
 
