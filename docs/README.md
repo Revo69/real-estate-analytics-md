@@ -46,6 +46,12 @@ graph TD
     class H,I analytics
 ```
 
+### Explanation
+- **Raw Links** — deduplicated queue of listing URLs collected by acquisition scripts.  
+- **Bronze Layer** — parsed listings table (`bronze_estate`) with structured fields and embedded JSON (prices, features).  
+- **Silver Layer** — normalized records stored in Supabase/Postgres for downstream analytics and dashboards.  
+- **Gold Layer** — planned stage for aggregated, analytics‑ready datasets (KPIs, trends, predictive models).  
+
 ---
 
 ## 🟤 Bronze Layer: Parsed Listings Table
