@@ -4,7 +4,11 @@ import logging
 
 BASE_DIR = os.path.dirname(__file__)  # path to scripts/
 DB_PATH = os.path.join("storage", "estate.db")
-SCHEMA_PATH = os.path.abspath(os.path.join(BASE_DIR, "..", "pipeline", "bronze", "schema.sql"))
+
+SCHEMA_PATHS = [
+    os.path.abspath(os.path.join(BASE_DIR, "..", "pipeline", "acquisition", "schema.sql"))
+    os.path.abspath(os.path.join(BASE_DIR, "..", "pipeline", "bronze", "schema.sql")),
+]
 
 # Configure logging
 LOG_PATH = os.path.join("logs", "init_db.log")
@@ -24,21 +28,19 @@ def init_db() -> bool:
     os.makedirs("storage", exist_ok=True)
     logging.info("Starting database initialization...")
 
-    # Check schema.sql exists
-    if not os.path.exists(SCHEMA_PATH):
-        logging.error(f"Schema file not found: {SCHEMA_PATH}")
-        return False
+    schema_sql = ""
+    for path in SCHEMA_PATHS:
+        if not os.path.exists(path):
+            logging.error(f"Schema file not found: {path}")
+            return False
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                schema_sql += f.read() + "\n"
+            logging.info(f"Loaded {path} successfully")
+        except Exception as e:
+            logging.error(f"Failed to read {path}: {e}")
+            return False
 
-    # Read schema.sql
-    try:
-        with open(SCHEMA_PATH, "r", encoding="utf-8") as f:
-            schema_sql = f.read()
-        logging.info("Loaded schema.sql successfully")
-    except Exception as e:
-        logging.error(f"Failed to read schema.sql: {e}")
-        return False
-
-    # Run SQL statements in SQLite
     try:
         with sqlite3.connect(DB_PATH) as conn:
             conn.executescript(schema_sql)
@@ -49,6 +51,7 @@ def init_db() -> bool:
 
     logging.info("✅ init_db completed successfully")
     return True
+
 
 if __name__ == "__main__":
     success = init_db()
