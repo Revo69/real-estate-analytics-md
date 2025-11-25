@@ -45,31 +45,12 @@ graph TD
     class G gold
     class H,I analytics
 ```
-```mermaid
-flowchart LR
-    A[Raw Links<br/>raw_links queue] --> B[Bronze Layer<br/>bronze_estate]
-    B --> C[Silver Layer<br/>silver_estate]
-    C --> D[Gold Layer<br/>analytics-ready datasets]
-
-    subgraph Bronze
-        B
-    end
-
-    subgraph Silver
-        C
-    end
-
-    subgraph Gold
-        D
-    end
-```
-
 
 ### Layer Overview
 
 | Layer   | Purpose                                                                 | Storage                  |
 |---------|-------------------------------------------------------------------------|--------------------------|
-| Raw     | Deduplicated queue of listing URLs for acquisition                      | `raw_links` (files/queue)|
+| Raw     | Deduplicated queue of listing URLs for acquisition                      | `raw_links` (SQLite)|
 | Bronze  | Parsed listings with structured fields + embedded JSON (prices, features)| `bronze_estate` (SQLite) |
 | Silver  | Normalized records for analytics and dashboards                         | `silver_estate` (Supabase/Postgres) |
 | Gold    | Aggregated, analytics‑ready datasets (KPIs, trends, predictive models)  | Planned (future)         |
