@@ -45,6 +45,25 @@ graph TD
     class G gold
     class H,I analytics
 ```
+```mermaid
+flowchart LR
+    A[Raw Links\n(raw_links queue)] --> B[Bronze Layer\nbronze_estate (SQLite)]
+    B --> C[Silver Layer\nsilver_estate (Supabase/Postgres)]
+    C --> D[Gold Layer\nanalytics-ready datasets\n(not yet implemented)]
+
+    subgraph Bronze
+        B
+    end
+
+    subgraph Silver
+        C
+    end
+
+    subgraph Gold
+        D
+    end
+```
+
 
 ### Layer Overview
 
