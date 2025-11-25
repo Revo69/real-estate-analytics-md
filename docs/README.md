@@ -111,42 +111,48 @@ This design ensures:
 
 ## ⚙️ Technologies
 
-- Python 3.11  
-- SQLite  
-- Supabase (Silver layer storage)  
-- GitHub Actions (CI/CD orchestration)  
-- Modular ETL structure (Bronze/Silver/Gold)  
-- Jupyter notebooks for analysis  
+- **Python 3.11** — core language for ETL scripts and orchestration  
+- **SQLite** — lightweight local database for Bronze layer storage  
+- **Supabase** — managed Postgres backend for Silver layer persistence and analytics  
+- **GitHub Actions** — CI/CD automation for scheduled and reproducible pipeline runs  
+- **Modular ETL architecture** — clear separation of Bronze (parsed listings), Silver (normalized data), and Gold (analytics-ready datasets)  
+- **Undetected‑chromedriver + Selenium** — resilient acquisition layer for scraping dynamic content  
+- **Mermaid diagrams & structured documentation** — visualizing pipeline architecture and onboarding collaborators  
+- **Jupyter Notebooks** — exploratory analysis, validation of A/B tests, and prototyping downstream models  
 
 ---
 
 ## 🚀 Usage
 
 ```bash
-# Run full pipeline locally
-python scripts/run_links_loader.py
-python scripts/run_bronze.py
-python scripts/run_silver.py
-# Gold layer is not yet implemented
+# Run full pipeline locally from project root
+python -m scripts.run_links_loader --start 1 --end 100
+python -m scripts.run_bronze
+python -m scripts.run_silver
+# Gold layer (analytics-ready datasets) is planned but not yet implemented
 ```
 
-Or let GitHub Actions run it daily via `.github/workflows/pipeline.yml`.
+Or let **GitHub Actions** orchestrate it automatically via  
+`.github/workflows/pipeline.yml` — scheduled daily at 02:00 UTC.
 
 ---
 
 ## 📊 Notebooks
 
-- `price_analysis.ipynb`: price trends by region  
-- `region_distribution.ipynb`: listing density  
-- `feature_quality_check.ipynb`: data completeness  
+- `price_analysis.ipynb` — explore price trends by region and currency  
+- `region_distribution.ipynb` — visualize listing density across districts  
+- `feature_quality_check.ipynb` — validate completeness and consistency of parsed features  
+- `ab_test_validation.ipynb` — statistical validation of experimental changes (e.g. publisher module A/B tests)  
 
 ---
 
 ## 📁 Data Storage
 
-- `storage/estate.db`: SQLite database containing Bronze and Silver layers  
-- `raw_links`: deduplicated queue of listing URLs  
-- `bronze_estate`: structured JSON records  
+- `storage/estate.db` — local **SQLite** database containing Bronze and Silver layers  
+- `raw_links` — deduplicated queue of listing URLs for acquisition  
+- `bronze_estate` — parsed listings table with structured fields and embedded JSON (prices, features)  
+- `silver_estate` — normalized records stored in **Supabase/Postgres** for downstream analytics  
+- `logs/` — pipeline execution logs, uploaded as artifacts in CI/CD  
 
 ---
 
