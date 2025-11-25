@@ -141,35 +141,35 @@ jobs:
       - name: 📊 Check progress after batch 2
         run: sqlite3 storage/estate.db "SELECT COUNT(*) FROM bronze_estate;"
 
-      - name: 🟤 Bronze batch 3 (16001–24000)
-        run: python -m scripts.run_bronze --start 16001 --end 24000
+      #- name: 🟤 Bronze batch 3 (16001–24000)
+      #  run: python -m scripts.run_bronze --start 16001 --end 24000
 
-      - name: 💾 Commit after batch 3
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add storage/estate.db
-          git commit -m "Bronze batch 3" || echo "No changes"
-          git pull --rebase origin main
-          git push origin main
+      #- name: 💾 Commit after batch 3
+      #  run: |
+      #    git config --global user.name "github-actions[bot]"
+      #    git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      #    git add storage/estate.db
+      #    git commit -m "Bronze batch 3" || echo "No changes"
+      #    git pull --rebase origin main
+      #    git push origin main
 
-      - name: 📊 Check progress after batch 3
-        run: sqlite3 storage/estate.db "SELECT COUNT(*) FROM bronze_estate;"
+      #- name: 📊 Check progress after batch 3
+      #  run: sqlite3 storage/estate.db "SELECT COUNT(*) FROM bronze_estate;"
 
-      - name: 🟤 Bronze batch 4 (24001–32000)
-        run: python -m scripts.run_bronze --start 24001 --end 32000
+      #- name: 🟤 Bronze batch 4 (24001–32000)
+      #  run: python -m scripts.run_bronze --start 24001 --end 32000
 
-      - name: 💾 Commit after batch 4
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add storage/estate.db
-          git commit -m "Bronze batch 4" || echo "No changes"
-          git pull --rebase origin main
-          git push origin main
+      #- name: 💾 Commit after batch 4
+      #  run: |
+      #    git config --global user.name "github-actions[bot]"
+      #    git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      #    git add storage/estate.db
+      #    git commit -m "Bronze batch 4" || echo "No changes"
+      #    git pull --rebase origin main
+      #    git push origin main
 
-      - name: 📊 Check progress after batch 4
-        run: sqlite3 storage/estate.db "SELECT COUNT(*) FROM bronze_estate;"
+      #- name: 📊 Check progress after batch 4
+      #  run: sqlite3 storage/estate.db "SELECT COUNT(*) FROM bronze_estate;"
 
       - name: 📎 Upload bronze logs
         uses: actions/upload-artifact@v4
