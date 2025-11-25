@@ -23,9 +23,12 @@ jobs:
       - name: 📦 Install dependencies
         run: pip install -r requirements.txt
 
-      - name: 🌐 Install Chromium + Chromedriver
+      - name: Clear undetected_chromedriver cache
+        run: rm -rf ~/.local/share/undetected_chromedriver
+
+      - name: Install Chrome and chromedriver
         run: |
-          sudo apt-get update -qq
+          sudo apt-get update
           sudo apt-get install -y chromium-browser chromium-chromedriver
 
       - name: 🗄️ Initialize DB
