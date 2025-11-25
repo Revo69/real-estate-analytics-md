@@ -7,29 +7,6 @@ A modular data pipeline for collecting, transforming, and analyzing real estate 
 ## Architecture Overview
 
 ```mermaid
-flowchart TD
-    subgraph Bronze[🟤 Bronze Layer - Raw Data]
-        A[raw_links] --> B[bronze_estate]
-    end
-    
-    subgraph Silver[⚪ Silver Layer - Cleaned & Structured]
-        B --> C[silver_listings]
-        B --> D[silver_main_features]
-        B --> E[silver_additional_features]
-    end
-    
-    subgraph Gold[🟡 Gold Layer - Business Metrics]
-        C & D & E --> F[price_trends]
-        C & D & E --> G[region_stats]
-        C & D & E --> H[anomaly_detection]
-    end
-
-    class A,B bronze
-    class C,D,E silver
-    class F,G,H gold
-```
-
-```mermaid
 %% Real Estate Analytics — Architecture Overview
 graph TD
     subgraph "Acquisition"
@@ -71,27 +48,48 @@ graph TD
 
 ---
 
-## 🟤 Bronze Layer: Structured JSON
+## 🟤 Bronze Layer: Raw Structured Data
 
-Unlike traditional bronze layers that store raw HTML or unprocessed data, this project stores **pre-parsed structured JSON** extracted from HTML listings. This ensures:
+The Bronze layer stores **structured but unnormalized data** directly extracted from 999.md listings.  
+Instead of keeping raw HTML (which is fragile and hard to query), we immediately parse the page and save all fields as structured text/JSON — preserving 100% of the original information while making it instantly queryable.
 
-- ✅ No loss of semantic information  
-- ✅ Easier debugging and reproducibility  
-- ✅ Ready for downstream normalization  
+### Table: `bronze_estate` (SQLite → `storage/estate.db`)
 
-Example record in `raw_estate`:
+| Column                    | Type        | Description                                                                 |
+|---------------------------|-------------|-----------------------------------------------------------------------------|
+| `id`                      | TEXT PK     | UUID for internal deduplication                                            |
+| `url`                     | TEXT UNIQUE | Full URL of the listing (e.g. `https://999.md/ru/100011729`)                |
+| `ad_id`                   | TEXT        | Original 999.md ad identifier                                              |
+| `status`                  | TEXT        | `success` / `error`                                                         |
+| `publication_date`        | TEXT        | Raw string like `Дата обновления:24 ноя. 2025, 14:45`                        |
+| `user_login`              | TEXT        | Seller/agent username                                                       |
+| `deal_type`               | TEXT        | "Продам" / "Сдаю посуточно" etc.                                            |
+| `region`                  | TEXT        | Region (e.g. `Кишинёв мун., Центр`)                                         |
+| `description`             | TEXT        | Full ad text                                                                |
+| `price_json`              | TEXT (JSON) | `{"mdl": 1200, "eur": 77000, "usd": null}` — extracted prices               |
+| `main_features_json`      | TEXT (JSON) | Raw main characteristics (rooms, floor, area, etc.)                         |
+| `additional_features_json`| TEXT (JSON) | Raw boolean flags (elevator, autonomous heating, etc.)                      |
+| `created_at`              | TIMESTAMP   | When the record was ingested                                                |
+
+### Example real record (as stored in Bronze)
 
 ```json
 {
-  "price": "89 000 €",
-  "location": "Chișinău, Botanica",
-  "rooms": "2",
-  "area": "54 m²",
-  "floor": "3/5",
-  "features": ["balcony", "elevator"]
+  "id": "473f33f2-f600-430a-9614-db143a652255",
+  "url": "https://999.md/ru/100011729",
+  "ad_id": "100011729",
+  "status": "success",
+  "publication_date": "Дата обновления:24 ноя. 2025, 14:45",
+  "user_login": "69719119",
+  "deal_type": "Сдаю посуточно",
+  "region": "Кишинёв мун., Кишинёв, Центр, str. Ismail, 88",
+  "description": "Кишинев, str. Izmail 88( центр, кафе \" PizzaMania \" )квартира на 4 персоны...",
+  "price_json": "{\"mdl\": 1200, \"eur\": null, \"usd\": null}",
+  "main_features_json": "{\"listing_author\": \"Застройщик\", \"number_of_rooms\": \"2-х комнатная квартира\", \"floor\": \"5\", \"total_floors\": \"11\"}",
+  "additional_features_json": "{}",
+  "created_at": "2025-11-24 12:54:40"
 }
 ```
-
 ---
 
 ## ⚙️ Technologies
