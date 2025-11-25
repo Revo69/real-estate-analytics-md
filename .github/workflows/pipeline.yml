@@ -26,10 +26,16 @@ jobs:
       - name: Clear undetected_chromedriver cache
         run: rm -rf ~/.local/share/undetected_chromedriver
 
-      - name: Install Chrome and chromedriver
+      - name: Install Google Chrome
+        uses: browser-actions/setup-chrome@v1
+        id: chrome
+      
+      - name: Install matching ChromeDriver
         run: |
-          sudo apt-get update
-          sudo apt-get install -y chromium-browser chromium-chromedriver
+          curl -s https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${{ steps.chrome.outputs.version }} -o LATEST_RELEASE
+          wget https://chromedriver.storage.googleapis.com/$(cat LATEST_RELEASE)/chromedriver_linux64.zip
+          unzip chromedriver_linux64.zip
+          sudo mv chromedriver /usr/local/bin/
 
       - name: 🗄️ Initialize DB
         run: python -m scripts.init_db
