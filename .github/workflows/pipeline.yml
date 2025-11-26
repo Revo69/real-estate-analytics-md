@@ -36,7 +36,7 @@ jobs:
 
       # Run link loader in batches
       - name: 🔗 Run links loader (pages 1-10)
-        run: python -m pipeline.acquisition.links_loader --start 1 --end 100
+        run: python -m pipeline.acquisition.links_loader --start 1 --end 10
 
       - name: 💾 Commit after batch 1
         run: |
@@ -112,7 +112,7 @@ jobs:
         uses: nanasess/setup-chromedriver@v2
 
       - name: 🟤 Bronze batch 1 (0–8000)
-        run: python -m pipeline.bronze.loader --start 0 --end 80
+        run: python -m pipeline.bronze.loader --start 0 --end 10
 
       - name: 💾 Commit after batch 1
         run: |
@@ -126,7 +126,7 @@ jobs:
         run: sqlite3 storage/estate.db "SELECT COUNT(*) FROM bronze_estate;"
 
       - name: 🟤 Bronze batch 2 (8001–16000)
-        run: python -m pipeline.bronze.loader --start 80 --end 100
+        run: python -m pipeline.bronze.loader --start 11 --end 20
 
       - name: 💾 Commit after batch 2
         run: |
