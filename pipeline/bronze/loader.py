@@ -3,6 +3,7 @@ import logging
 import sqlite3
 import uuid
 import json
+import argparse
 from .parsers import parse_features
 
 # Logging setup
@@ -50,14 +51,23 @@ def save_estate(record: dict):
         except sqlite3.OperationalError as e:
             logging.error(f"Table bronze_estate not found. Did you run init_db? Error: {e}")
 
-def main():
-    """Load pending links from raw_links, parse them, and save into bronze_estate."""
+def main(start: int, end: int):
+    """
+    Load pending links from raw_links in the given range [start, end],
+    parse them, and save into bronze_estate.
+    """
+    limit = end - start + 1
+    offset = start - 1
+
     with sqlite3.connect(DB_PATH) as conn:
         cur = conn.cursor()
-        cur.execute("SELECT url FROM raw_links WHERE status='pending'")
+        cur.execute(
+            "SELECT url FROM raw_links WHERE status='pending' LIMIT ? OFFSET ?",
+            (limit, offset)
+        )
         urls = [row[0] for row in cur.fetchall()]
 
-    logging.info(f"Found {len(urls)} pending links")
+    logging.info(f"Found {len(urls)} pending links in range {start}-{end}")
 
     for url in urls:
         record = parse_features(url)
@@ -73,6 +83,9 @@ def main():
             conn.commit()
         logging.info(f"Marked link {url} as {record.get('status')}")
 
-
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--start", type=int, required=True, help="Start index in raw_links")
+    parser.add_argument("--end", type=int, required=True, help="End index in raw_links")
+    args = parser.parse_args()
+    main(args.start, args.end)
