@@ -44,7 +44,7 @@ jobs:
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add storage/estate.db
           git commit -m "Update raw_links batch 1-100" || echo "No changes"
-          git push origin main --force-with-lease
+          git push origin main --force
 
     #  - name: 🔗 Run links loader (pages 101-200)
     #    run: python -m pipeline.acquisition.links_loader --start 101 --end 200
@@ -55,7 +55,7 @@ jobs:
     #      git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
     #      git add storage/estate.db
     #      git commit -m "Update raw_links batch 101-200" || echo "No changes"
-    #      git push origin main --force-with-lease
+    #      git push origin main --force
 
     #  - name: 🔗 Run links loader (pages 201-300)
     #    run: python -m pipeline.acquisition.links_loader --start 201 --end 300
@@ -66,7 +66,7 @@ jobs:
     #      git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
     #      git add storage/estate.db
     #      git commit -m "Update raw_links batch 201-300" || echo "No changes"
-    #      git push origin main --force-with-lease
+    #      git push origin main --force
 
    #   - name: 🔗 Run links loader (pages 301-385)
    #     run: python -m pipeline.acquisition.links_loader --start 301 --end 385
@@ -77,7 +77,7 @@ jobs:
    #       git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
    #       git add storage/estate.db
    #       git commit -m "Update raw_links batch 301-385" || echo "No changes"
-   #       git push origin main --force-with-lease
+   #       git push origin main --force
 
       - name: 📊 Check raw_links count
         run: sqlite3 storage/estate.db "SELECT COUNT(*) FROM raw_links;"
@@ -120,7 +120,7 @@ jobs:
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add storage/estate.db
           git commit -m "Bronze batch 1" || echo "No changes"
-          git push origin main --force-with-lease
+          git push origin main --force
 
       - name: 📊 Check progress after batch 1
         run: sqlite3 storage/estate.db "SELECT COUNT(*) FROM bronze_estate;"
@@ -134,7 +134,7 @@ jobs:
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add storage/estate.db
           git commit -m "Bronze batch 2" || echo "No changes"
-          git push origin main --force-with-lease
+          git push origin main --force
 
       - name: 📊 Check progress after batch 2
         run: sqlite3 storage/estate.db "SELECT COUNT(*) FROM bronze_estate;"
