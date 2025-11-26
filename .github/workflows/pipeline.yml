@@ -179,6 +179,11 @@ jobs:
     steps:
       - name: 📥 Checkout repo
         uses: actions/checkout@v4
+  
+      - name: Pull latest database after bronze
+        run: |
+          git fetch origin main
+          git checkout origin/main -- storage/estate.db
 
       - name: 🐍 Set up Python
         uses: actions/setup-python@v5
