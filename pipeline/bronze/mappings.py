@@ -5,7 +5,7 @@ MAIN_FEATURES_MAP = {
     "Автор объявления": "listing_author",
     "Количество комнат": "number_of_rooms",
     "Ливинг": "living_room",              # если это отдельная комната-гостиная
-    "Общая площадь, м²": "total_area_m2",
+    "Общая площадь": "total_area_m2",
     "Жилой фонд": "housing_type",         # вторичный / новострой
     "Этаж": "floor",
     "Количество этажей": "total_floors",
