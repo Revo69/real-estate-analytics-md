@@ -13,11 +13,11 @@ MAIN_FEATURES_MAP = {
     "Тип здания": "building_type",
     "Состояние квартиры": "apartment_condition",
     "Планировка": "layout",
-    "Жилая площадь, м²": "living_area_m2",
-    "Площадь кухни, м²": "kitchen_area_m2",
+    "Жилая площадь": "living_area_m2",
+    "Площадь кухни": "kitchen_area_m2",
     "Санузел": "bathroom_count",           # количество
     "Балкон / лоджия": "balcony_loggia",
-    "Высота потолков, см": "ceiling_height_cm",
+    "Высота потолков": "ceiling_height_cm",
     "Парковочное место": "parking_space",
 }
 
