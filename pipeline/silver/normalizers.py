@@ -27,12 +27,18 @@ def normalize_area(value: str):
     """'22 м²' → 22.0"""
     if not value:
         return None
-    digits = ''.join(ch for ch in value if (ch.isdigit() or ch == '.'))
-    try:
-        return float(digits) if digits else None
-    except ValueError:
-        logging.warning(f"Unexpected area: {value}")
-        return None
+    # заменяем запятую на точку и убираем лишние пробелы
+    val = str(value).replace(",", ".").strip()
+    # ищем число (целое или с точкой)
+    match = re.search(r"\d+(\.\d+)?", val)
+    if match:
+        try:
+            return float(match.group())
+        except ValueError:
+            logging.warning(f"Unexpected area parse error: {value}")
+            return None
+    logging.warning(f"Unexpected area format: {value}")
+    return None
 
 def normalize_ceiling_height(value: str):
     """'250 см' → 250 (int)"""
