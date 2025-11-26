@@ -121,7 +121,7 @@ jobs:
           git add storage/estate.db
           git commit -m "Bronze batch 1" || echo "No changes"
           git pull --rebase origin main
-          git push origin main
+          git push origin main --force
 
       - name: 📊 Check progress after batch 1
         run: sqlite3 storage/estate.db "SELECT COUNT(*) FROM bronze_estate;"
@@ -136,7 +136,7 @@ jobs:
           git add storage/estate.db
           git commit -m "Bronze batch 2" || echo "No changes"
           git pull --rebase origin main
-          git push origin main
+          git push origin main --force
 
       - name: 📊 Check progress after batch 2
         run: sqlite3 storage/estate.db "SELECT COUNT(*) FROM bronze_estate;"
@@ -151,7 +151,7 @@ jobs:
       #    git add storage/estate.db
       #    git commit -m "Bronze batch 3" || echo "No changes"
       #    git pull --rebase origin main
-      #    git push origin main
+      #    git push origin main --force
 
       #- name: 📊 Check progress after batch 3
       #  run: sqlite3 storage/estate.db "SELECT COUNT(*) FROM bronze_estate;"
@@ -166,7 +166,7 @@ jobs:
       #    git add storage/estate.db
       #    git commit -m "Bronze batch 4" || echo "No changes"
       #    git pull --rebase origin main
-      #    git push origin main
+      #    git push origin main --force
 
       #- name: 📊 Check progress after batch 4
       #  run: sqlite3 storage/estate.db "SELECT COUNT(*) FROM bronze_estate;"
