@@ -112,7 +112,7 @@ jobs:
         uses: nanasess/setup-chromedriver@v2
 
       - name: 🟤 Bronze batch 1 (0–8000)
-        run: python -m scripts.run_bronze --start 0 --end 8000
+        run: python -m pipeline.bronze.loader --start 0 --end 8000
 
       - name: 💾 Commit after batch 1
         run: |
@@ -127,7 +127,7 @@ jobs:
         run: sqlite3 storage/estate.db "SELECT COUNT(*) FROM bronze_estate;"
 
       - name: 🟤 Bronze batch 2 (8001–16000)
-        run: python -m scripts.run_bronze --start 8001 --end 16000
+        run: python -m pipeline.bronze.loader --start 8001 --end 16000
 
       - name: 💾 Commit after batch 2
         run: |
@@ -142,7 +142,7 @@ jobs:
         run: sqlite3 storage/estate.db "SELECT COUNT(*) FROM bronze_estate;"
 
       #- name: 🟤 Bronze batch 3 (16001–24000)
-      #  run: python -m scripts.run_bronze --start 16001 --end 24000
+      #  run: python -m pipeline.bronze.loader --start 16001 --end 24000
 
       #- name: 💾 Commit after batch 3
       #  run: |
@@ -157,7 +157,7 @@ jobs:
       #  run: sqlite3 storage/estate.db "SELECT COUNT(*) FROM bronze_estate;"
 
       #- name: 🟤 Bronze batch 4 (24001–32000)
-      #  run: python -m scripts.run_bronze --start 24001 --end 32000
+      #  run: python -m pipeline.bronze.loader --start 24001 --end 34000
 
       #- name: 💾 Commit after batch 4
       #  run: |
