@@ -35,7 +35,7 @@ jobs:
         run: python -m scripts.init_db
 
       # Run link loader in batches
-      - name: 🔗 Run links loader (pages 1-100)
+      - name: 🔗 Run links loader (pages 1-10)
         run: python -m pipeline.acquisition.links_loader --start 1 --end 100
 
       - name: 💾 Commit after batch 1
@@ -46,38 +46,38 @@ jobs:
           git commit -m "Update raw_links batch 1-100" || echo "No changes"
           git push origin main --force-with-lease
 
-      - name: 🔗 Run links loader (pages 101-200)
-        run: python -m pipeline.acquisition.links_loader --start 101 --end 200
+    #  - name: 🔗 Run links loader (pages 101-200)
+    #    run: python -m pipeline.acquisition.links_loader --start 101 --end 200
+#
+    #  - name: 💾 Commit after batch 2
+    #    run: |
+    #      git config --global user.name "github-actions[bot]"
+    #      git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+    #      git add storage/estate.db
+    #      git commit -m "Update raw_links batch 101-200" || echo "No changes"
+    #      git push origin main --force-with-lease
 
-      - name: 💾 Commit after batch 2
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add storage/estate.db
-          git commit -m "Update raw_links batch 101-200" || echo "No changes"
-          git push origin main --force-with-lease
+    #  - name: 🔗 Run links loader (pages 201-300)
+    #    run: python -m pipeline.acquisition.links_loader --start 201 --end 300
+#
+    #  - name: 💾 Commit after batch 3
+    #    run: |
+    #      git config --global user.name "github-actions[bot]"
+    #      git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+    #      git add storage/estate.db
+    #      git commit -m "Update raw_links batch 201-300" || echo "No changes"
+    #      git push origin main --force-with-lease
 
-      - name: 🔗 Run links loader (pages 201-300)
-        run: python -m pipeline.acquisition.links_loader --start 201 --end 300
-
-      - name: 💾 Commit after batch 3
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add storage/estate.db
-          git commit -m "Update raw_links batch 201-300" || echo "No changes"
-          git push origin main --force-with-lease
-
-      - name: 🔗 Run links loader (pages 301-385)
-        run: python -m pipeline.acquisition.links_loader --start 301 --end 385
-
-      - name: 💾 Commit after batch 4
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add storage/estate.db
-          git commit -m "Update raw_links batch 301-385" || echo "No changes"
-          git push origin main --force-with-lease
+   #   - name: 🔗 Run links loader (pages 301-385)
+   #     run: python -m pipeline.acquisition.links_loader --start 301 --end 385
+#
+  #    - name: 💾 Commit after batch 4
+   #     run: |
+   #      git config --global user.name "github-actions[bot]"
+   #       git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+   #       git add storage/estate.db
+   #       git commit -m "Update raw_links batch 301-385" || echo "No changes"
+   #       git push origin main --force-with-lease
 
       - name: 📊 Check raw_links count
         run: sqlite3 storage/estate.db "SELECT COUNT(*) FROM raw_links;"
@@ -112,7 +112,7 @@ jobs:
         uses: nanasess/setup-chromedriver@v2
 
       - name: 🟤 Bronze batch 1 (0–8000)
-        run: python -m pipeline.bronze.loader --start 0 --end 8000
+        run: python -m pipeline.bronze.loader --start 0 --end 80
 
       - name: 💾 Commit after batch 1
         run: |
@@ -126,7 +126,7 @@ jobs:
         run: sqlite3 storage/estate.db "SELECT COUNT(*) FROM bronze_estate;"
 
       - name: 🟤 Bronze batch 2 (8001–16000)
-        run: python -m pipeline.bronze.loader --start 8001 --end 16000
+        run: python -m pipeline.bronze.loader --start 80 --end 100
 
       - name: 💾 Commit after batch 2
         run: |
