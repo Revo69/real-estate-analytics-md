@@ -1,5 +1,6 @@
 import datetime
 import logging
+import re
 
 def normalize_number_of_rooms(value: str):
     """'2-х комнатная квартира' → 2"""
