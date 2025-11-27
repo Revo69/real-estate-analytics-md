@@ -16,7 +16,8 @@ from pipeline.silver.normalizers import (
     normalize_balcony,
     normalize_date,
     normalize_price,
-    normalize_text
+    normalize_text,
+    normalize_region
 )
 
 from pipeline.silver.quality import (
@@ -77,7 +78,7 @@ def transform_record(row):
     """Transform bronze_estate row into silver_estate payload for Supabase."""
     (
         id, url, ad_id, status, publication_date, user_login, deal_type,
-        region, description, price_json, main_features_json, additional_features_json
+        region_raw, description, price_json, main_features_json, additional_features_json
     ) = row
 
     price = safe_json_loads(price_json)
@@ -85,6 +86,9 @@ def transform_record(row):
     add = safe_json_loads(additional_features_json)
 
     pub_date = parse_publication_date(publication_date)
+
+    # address
+    region_data = normalize_region(region_raw)
     
     record = {
         "id": id,
@@ -94,9 +98,17 @@ def transform_record(row):
         "publication_date": normalize_date(pub_date),
         "user_login": user_login,
         "deal_type": deal_type,
-        "region": region,
+        "region_raw": region_raw,
         "description": description,
 
+        # geo
+        "municipality": region_data["municipality"],
+        "city":         region_data["city"],
+        "sector":       region_data["sector"],
+        "street_raw":   region_data["street_raw"],
+        "house":        region_data["house"],
+        "region_raw":   region_data["region_raw"],
+        
         # Prices
         "price_mdl": normalize_price(price.get("mdl")),
         "price_eur": normalize_price(price.get("eur")),
