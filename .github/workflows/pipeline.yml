@@ -15,6 +15,9 @@ jobs:
       - name: 📥 Checkout repo
         uses: actions/checkout@v4
 
+      - name: Setup Git LFS
+        run: git lfs install
+
       - name: 🐍 Set up Python
         uses: actions/setup-python@v5
         with:
@@ -94,6 +97,9 @@ jobs:
     steps:
       - name: 📥 Checkout repo
         uses: actions/checkout@v4
+        
+      - name: Setup Git LFS
+        run: git lfs install
 
       - name: 🐍 Set up Python
         uses: actions/setup-python@v5
@@ -179,6 +185,9 @@ jobs:
     steps:
       - name: 📥 Checkout repo
         uses: actions/checkout@v4
+
+      - name: Setup Git LFS
+        run: git lfs install
   
       - name: Pull latest database after bronze
         run: |
