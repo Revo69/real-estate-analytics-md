@@ -20,4 +20,49 @@ jobs:
       - name: Setup Git LFS
         run: git lfs install
 
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
+      - name: 📦 Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: 🗄️ Initialize DB
+        run: python -m scripts.init_db
+
+
+
+
+
+
+  silver:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout repo
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Setup Git LFS
+        run: git lfs install
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 📦 Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: ⚙️ Silver → Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python -m scripts.run_silver
+
+      - name: 📎 Upload silver logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: silver-logs-${{ github.run_number }}
+          path: logs/
