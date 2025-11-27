@@ -63,14 +63,14 @@ def parse_publication_date(raw_date: str):
         logging.error(f"Failed to parse publication_date '{raw_date}': {e}")
         return None
 
-def safe_json_loads(raw: str):
+def safe_json_loads(raw: str) -> dict:
     """Safely parse JSON string, return {} if invalid."""
-    if not raw:
+    if raw is None or str(raw).strip() == "":
         return {}
     try:
         return json.loads(raw)
-    except Exception as e:
-        logging.warning(f"Invalid JSON skipped: {e}")
+    except (json.JSONDecodeError, TypeError, ValueError) as e:
+        logging.warning(f"Invalid JSON skipped: {raw!r} | {e}")
         return {}
 
 def transform_record(row):
