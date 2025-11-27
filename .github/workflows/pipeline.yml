@@ -27,14 +27,16 @@ jobs:
         uses: actions/checkout@v4
         with:
           lfs: true
-  
+          fetch-depth: 0  # Полная история (на всякий случай)
+
       - name: Setup LFS
         run: git lfs install
-  
+
       - name: Revert delete and restore estate.db
         run: |
-          # Теперь коммит 65dc5e доступен локально
-          git checkout 65dc5e -- storage/estate.db
+          # Скачиваем коммит 65dc5e напрямую из удалённого репозитория
+          git fetch origin 65dc5e
+          git checkout FETCH_HEAD -- storage/estate.db
           git add storage/estate.db
           git commit -m "Revert delete: Restore estate.db from previous commit"
           git push origin main --force
