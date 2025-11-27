@@ -20,17 +20,4 @@ jobs:
       - name: Setup Git LFS
         run: git lfs install
 
-  restore-db:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout with full history
-        uses: actions/checkout@v4
-        with:
-          lfs: true
-          fetch-depth: 0
-      - name: Setup LFS
-        run: git lfs install
-      - name: Reset last commit (revert f95b75d)
-        run: |
-          git reset --hard HEAD~1
-          git push origin main --force    # ← ИМЕННО --force, а не --force-with-lease
+
