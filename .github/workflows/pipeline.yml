@@ -23,20 +23,16 @@ jobs:
   restore-db:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout with full history
         uses: actions/checkout@v4
         with:
           lfs: true
-          fetch-depth: 0  # Полная история (на всякий случай)
+          fetch-depth: 0
 
       - name: Setup LFS
         run: git lfs install
 
-      - name: Revert delete and restore estate.db
+      - name: Reset last commit (revert f95b75d)
         run: |
-          # Скачиваем коммит 65dc5e напрямую из удалённого репозитория
-          git fetch origin 65dc5e
-          git checkout FETCH_HEAD -- storage/estate.db
-          git add storage/estate.db
-          git commit -m "Revert delete: Restore estate.db from previous commit"
-          git push origin main --force
+          git reset --hard HEAD~1  # Откат на 1 коммит назад (убирает удаление)
+          git push origin main --force-with-lease  # Безопасный push
