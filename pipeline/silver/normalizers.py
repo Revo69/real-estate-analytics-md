@@ -1,5 +1,6 @@
 import datetime
 import logging
+from typing import Optional, Dict
 import re
 
 def normalize_number_of_rooms(value: str):
@@ -96,3 +97,41 @@ def normalize_text(value: str):
     if not value:
         return None
     return value.strip()
+
+def normalize_region(region_raw: Optional[str]) -> Dict[str, Optional[str]]:
+    """
+    Final production-grade normalization of Moldovan addresses
+    """
+    if not region_raw or not region_raw.strip():
+        return {
+            "municipality": None,
+            "city": None,
+            "sector": None,
+            "street_raw": None,
+            "house": None,
+            "region_raw": region_raw
+        }
+
+    # Protection against extra commas + exactly 5 fields
+    parts = [p.strip() for p in region_raw.split(",", 5)]
+    while len(parts) < 5:
+        parts.append("")
+
+    municipality = parts[0] or None
+    city         = parts[1] or None
+    sector       = parts[2] or None
+    street_raw   = parts[3] or None
+
+    # House — only clean garbage
+    house = None
+    if parts[4]:
+        house = re.sub(r"[^\w\/\-\s]", "", parts[4]).strip() or None
+
+    return {
+        "municipality": municipality,
+        "city": city,
+        "sector": sector,
+        "street_raw": street_raw,
+        "house": house,
+        "region_raw": region_raw
+    }
