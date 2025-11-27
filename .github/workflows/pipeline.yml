@@ -33,8 +33,8 @@ jobs:
   
       - name: Revert delete and restore estate.db
         run: |
-          # Восстанавливаем из предыдущего коммита (65dc5e)
+          # Теперь коммит 65dc5e доступен локально
           git checkout 65dc5e -- storage/estate.db
           git add storage/estate.db
           git commit -m "Revert delete: Restore estate.db from previous commit"
-          git push origin main --force     
+          git push origin main --force
