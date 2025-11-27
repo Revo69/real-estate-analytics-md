@@ -82,9 +82,10 @@ def extract_text(soup, selector, key_name, mapping=None, normalize=True, remove_
     return {key_name: text}
 
 
-def extract_all_prices(soup) -> dict:
+def extract_all_prices(soup: BeautifulSoup) -> Dict[str, Optional[int]]:
     result = {"mdl": None, "eur": None, "usd": None}
 
+    # --- main price ---
     main_tag = soup.select_one("span.styles_footer__main__8seZ7")
     if main_tag:
         main_text = main_tag.get_text(strip=True)
@@ -96,19 +97,27 @@ def extract_all_prices(soup) -> dict:
             match = re.search(r"([\d\s]+)\s*€", main_text)
             if match:
                 result["eur"] = int(match.group(1).replace(" ", ""))
+        elif "$" in main_text:
+            match = re.search(r"([\d\s]+)\s*\$", main_text)
+            if match:
+                result["usd"] = int(match.group(1).replace(" ", ""))
 
+    # --- converted prices ---
     converted_tags = soup.select("ul.styles_footer__converted__kKoJd li")
     for li in converted_tags:
         text = li.get_text(strip=True)
-        if "€" in text:
+
+        if "€" in text and result["eur"] is None:
             match = re.search(r"≈\s*([\d\s]+)\s*€", text)
             if match:
                 result["eur"] = int(match.group(1).replace(" ", ""))
-        elif "$" in text:
+
+        elif "$" in text and result["usd"] is None:
             match = re.search(r"≈\s*([\d\s]+)\s*\$", text)
             if match:
                 result["usd"] = int(match.group(1).replace(" ", ""))
-        elif "MDL" in text:
+
+        elif "MDL" in text and result["mdl"] is None:
             match = re.search(r"≈\s*([\d\s]+)\s*MDL", text)
             if match:
                 result["mdl"] = int(match.group(1).replace(" ", ""))
