@@ -28,15 +28,163 @@ jobs:
       - name: 📦 Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Clear undetected_chromedriver cache
+        run: rm -rf ~/.local/share/undetected_chromedriver
+
+      - name: Setup Chrome + Driver 
+        uses: browser-actions/setup-chrome@v1 
+      - name: Setup ChromeDriver 
+        uses: nanasess/setup-chromedriver@v2
+
       - name: 🗄️ Initialize DB
         run: python -m scripts.init_db
 
+      # Run link loader in batches
+      - name: 🔗 Run links loader (pages 1-10)
+        run: python -m pipeline.acquisition.links_loader --start 1 --end 100
 
+      - name: 💾 Commit after batch 1
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add storage/estate.db
+          git commit -m "Update raw_links batch 1-100" || echo "No changes"
+          git push origin main --force
 
+      - name: 🔗 Run links loader (pages 101-200)
+        run: python -m pipeline.acquisition.links_loader --start 101 --end 200
 
+      - name: 💾 Commit after batch 2
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add storage/estate.db
+          git commit -m "Update raw_links batch 101-200" || echo "No changes"
+          git push origin main --force
 
+      #- name: 🔗 Run links loader (pages 201-300)
+      #  run: python -m pipeline.acquisition.links_loader --start 201 --end 300
+
+      #- name: 💾 Commit after batch 3
+      #  run: |
+      #    git config --global user.name "github-actions[bot]"
+      #    git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      #    git add storage/estate.db
+      #    git commit -m "Update raw_links batch 201-300" || echo "No changes"
+      #    git push origin main --force
+
+      #- name: 🔗 Run links loader (pages 301-385)
+      #  run: python -m pipeline.acquisition.links_loader --start 301 --end 385
+
+      #- name: 💾 Commit after batch 4
+      #  run: |
+      #   git config --global user.name "github-actions[bot]"
+      #    git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      #    git add storage/estate.db
+      #   git commit -m "Update raw_links batch 301-385" || echo "No changes"
+      #    git push origin main --force
+
+      - name: 📊 Check raw_links count
+        run: sqlite3 storage/estate.db "SELECT COUNT(*) FROM raw_links;"
+
+      - name: 📎 Upload link logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: links-logs-${{ github.run_number }}
+          path: logs/
+
+  bronze:
+    needs: links-loader
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout repo
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          
+      - name: Setup Git LFS
+        run: git lfs install
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 📦 Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Clear undetected_chromedriver cache
+        run: rm -rf ~/.local/share/undetected_chromedriver
+
+      - name: Setup Chrome + Driver 
+        uses: browser-actions/setup-chrome@v1 
+      - name: Setup ChromeDriver 
+        uses: nanasess/setup-chromedriver@v2
+
+      - name: 🟤 Bronze batch 1 (0–8000)
+        run: python -m pipeline.bronze.loader --start 0 --end  8000
+
+      - name: 💾 Commit after batch 1
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add storage/estate.db
+          git commit -m "Bronze batch 1" || echo "No changes"
+          git push origin main --force
+
+      - name: 📊 Check progress after batch 1
+        run: sqlite3 storage/estate.db "SELECT COUNT(*) FROM bronze_estate;"
+
+      - name: 🟤 Bronze batch 2 (8001–16000)
+        run: python -m pipeline.bronze.loader --start 8001 --end 16000
+
+      - name: 💾 Commit after batch 2
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add storage/estate.db
+          git commit -m "Bronze batch 2" || echo "No changes"
+          git push origin main --force
+
+      - name: 📊 Check progress after batch 2
+        run: sqlite3 storage/estate.db "SELECT COUNT(*) FROM bronze_estate;"
+
+      #- name: 🟤 Bronze batch 3 (16001–24000)
+      #  run: python -m pipeline.bronze.loader --start 16001 --end 24000
+
+      #- name: 💾 Commit after batch 3
+      #  run: |
+      #    git config --global user.name "github-actions[bot]"
+      #    git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      #    git add storage/estate.db
+      #    git commit -m "Bronze batch 3" || echo "No changes"
+      #    git push
+
+      #- name: 📊 Check progress after batch 3
+      #  run: sqlite3 storage/estate.db "SELECT COUNT(*) FROM bronze_estate;"
+
+      #- name: 🟤 Bronze batch 4 (24001–32000)
+      #  run: python -m pipeline.bronze.loader --start 24001 --end 34000
+
+      #- name: 💾 Commit after batch 4
+      #  run: |
+      #    git config --global user.name "github-actions[bot]"
+      #    git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      #    git add storage/estate.db
+      #    git commit -m "Bronze batch 4" || echo "No changes"
+      #    git push
+
+      #- name: 📊 Check progress after batch 4
+      #  run: sqlite3 storage/estate.db "SELECT COUNT(*) FROM bronze_estate;"
+
+      - name: 📎 Upload bronze logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: bronze-logs-${{ github.run_number }}
+          path: logs/
 
   silver:
+    needs: bronze
     runs-on: ubuntu-latest
     steps:
       - name: 📥 Checkout repo
@@ -46,6 +194,11 @@ jobs:
 
       - name: Setup Git LFS
         run: git lfs install
+  
+      - name: Pull latest database after bronze
+        run: |
+          git fetch origin main
+          git checkout origin/main -- storage/estate.db
 
       - name: 🐍 Set up Python
         uses: actions/setup-python@v5
