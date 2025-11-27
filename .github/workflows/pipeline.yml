@@ -28,11 +28,9 @@ jobs:
         with:
           lfs: true
           fetch-depth: 0
-
       - name: Setup LFS
         run: git lfs install
-
       - name: Reset last commit (revert f95b75d)
         run: |
-          git reset --hard HEAD~1  # Откат на 1 коммит назад (убирает удаление)
-          git push origin main --force-with-lease  # Безопасный push
+          git reset --hard HEAD~1
+          git push origin main --force    # ← ИМЕННО --force, а не --force-with-lease
