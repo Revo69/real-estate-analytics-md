@@ -1,8 +1,7 @@
 name: Real Estate Pipeline
-
 on:
   schedule:
-    - cron: '0 2 * * *'   # Daily at 02:00 UTC
+    - cron: '0 2 * * *'   # Каждый день в 02:00 UTC
   workflow_dispatch:
 
 permissions:
@@ -12,244 +11,193 @@ jobs:
   links-loader:
     runs-on: ubuntu-latest
     steps:
-      - name: 📥 Checkout repo
+      - name: Checkout + Full LFS
         uses: actions/checkout@v4
         with:
           lfs: true
+          fetch-depth: 0                  # ← КРИТИЧНО для LFS push --all
 
       - name: Setup Git LFS
         run: git lfs install
 
-      - name: 🐍 Set up Python
+      - name: Pull all existing LFS objects
+        run: git lfs pull --all origin main   # гарантируем, что всё уже есть
+
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: 📦 Install dependencies
+      - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Clear undetected_chromedriver cache
-        run: rm -rf ~/.local/share/undetected_chromedriver
+      - name: Clear ChromeDriver cache + Setup browser
+        run: |
+          rm -rf ~/.local/share/undetected_chromedriver
+          browser-actions/setup-chrome@v1
+          nanasess/setup-chromedriver@v2
 
-      - name: Setup Chrome + Driver 
-        uses: browser-actions/setup-chrome@v1 
-      - name: Setup ChromeDriver 
-        uses: nanasess/setup-chromedriver@v2
-
-      - name: 🗄️ Initialize DB
+      - name: Initialize DB
         run: python -m scripts.init_db
 
-      # Run link loader in batches
-      - name: 🔗 Run links loader (pages 1-100)
+      # ──────── Batch 1 ────────
+      - name: Links loader 1–100
         run: python -m pipeline.acquisition.links_loader --start 1 --end 100
 
-      - name: 💾 Commit after batch 1
+      - name: Commit & Push batch 1
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git lfs fetch --all && git lfs checkout   # 👈 гарантируем наличие LFS-объектов
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add storage/estate.db
-          git commit -m "Update raw_links batch 1-100" || echo "No changes"
-          git push origin main --force-with-lease --no-verify
-          git lfs push --all origin main            # 👈 отправляем LFS-объекты
+          git commit -m "raw_links: batch 1–100" || echo "No changes"
+          git push origin main
+          git lfs push --all origin main     # ← ГЛАВНАЯ СТРОКА — решает GH008 навсегда
 
-      - name: 🔗 Run links loader (pages 101-200)
+      # ──────── Batch 2 ────────
+      - name: Links loader 101–200
         run: python -m pipeline.acquisition.links_loader --start 101 --end 200
 
-      - name: 💾 Commit after batch 2
+      - name: Commit & Push batch 2
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git lfs fetch --all && git lfs checkout
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add storage/estate.db
-          git commit -m "Update raw_links batch 101-200" || echo "No changes"
-          git push origin main --force-with-lease --no-verify
+          git commit -m "raw_links: batch 101–200" || echo "No changes"
+          git push origin main
           git lfs push --all origin main
 
-      #- name: 🔗 Run links loader (pages 201-300)
-      #  run: python -m pipeline.acquisition.links_loader --start 201 --end 300
+      # При необходимости раскомментируй остальные батчи по той же схеме
 
-      #- name: 💾 Commit after batch 3
-      #  run: |
-      #    git config --global user.name "github-actions[bot]"
-      #    git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-      #    git add storage/estate.db
-      #    git commit -m "Update raw_links batch 201-300" || echo "No changes"
-      #    git push origin main --force-with-lease --no-verify
-      #    git lfs push --all origin main
-
-      #- name: 🔗 Run links loader (pages 301-385)
-      #  run: python -m pipeline.acquisition.links_loader --start 301 --end 385
-
-      #- name: 💾 Commit after batch 4
-      #  run: |
-      #    git config --global user.name "github-actions[bot]"
-      #    git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-      #    git add storage/estate.db
-      #    git commit -m "Update raw_links batch 301-385" || echo "No changes"
-      #    git push origin main --force-with-lease --no-verify
-      #    git lfs push --all origin main
-
-      - name: 📊 Check raw_links count
+      - name: Check raw_links count
         run: sqlite3 storage/estate.db "SELECT COUNT(*) FROM raw_links;"
 
-      - name: 📎 Upload link logs
+      - name: Upload logs
         uses: actions/upload-artifact@v4
         with:
           name: links-logs-${{ github.run_number }}
           path: logs/
 
+  # ==================================================================
   bronze:
     needs: links-loader
     runs-on: ubuntu-latest
     steps:
-      - name: 📥 Checkout repo
+      - name: Checkout + Full LFS
         uses: actions/checkout@v4
         with:
           lfs: true
-          
+          fetch-depth: 0
+
       - name: Setup Git LFS
         run: git lfs install
 
-      - name: 🐍 Set up Python
+      - name: Pull all LFS objects
+        run: git lfs pull --all origin main
+
+      - name: Set up Python + deps
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - run: pip install -r requirements.txt
 
-      - name: 📦 Install dependencies
-        run: pip install -r requirements.txt
+      - name: Setup Chrome
+        run: |
+          rm -rf ~/.local/share/undetected_chromedriver
+          browser-actions/setup-chrome@v1
+          nanasess/setup-chromedriver@v2
 
-      - name: Clear undetected_chromedriver cache
-        run: rm -rf ~/.local/share/undetected_chromedriver
+      # Batch 1
+      - name: Bronze 0–8000
+        run: python -m pipeline.bronze.loader --start 0 --end 8000
 
-      - name: Setup Chrome + Driver 
-        uses: browser-actions/setup-chrome@v1 
-      - name: Setup ChromeDriver 
-        uses: nanasess/setup-chromedriver@v2
-
-      - name: 🟤 Bronze batch 1 (0–8000)
-        run: python -m pipeline.bronze.loader --start 0 --end  8000
-
-      - name: 💾 Commit after batch 1
+      - name: Commit & Push bronze batch 1
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git lfs fetch --all && git lfs checkout
           git add storage/estate.db
-          # Гениальная защита от блокировки workflow permissions
           git restore --staged .github/workflows || true
-          git restore --staged .github/ || true
-          git commit -m "Bronze batch 1" || echo "No changes"
-          git push origin main --force-with-lease
+          git commit -m "bronze: batch 0–8000" || echo "No changes"
+          git push origin main
           git lfs push --all origin main
 
-      - name: 📊 Check progress after batch 1
-        run: sqlite3 storage/estate.db "SELECT COUNT(*) FROM bronze_estate;"
-
-      - name: 🟤 Bronze batch 2 (8001–16000)
+      # Batch 2
+      - name: Bronze 8001–16000
         run: python -m pipeline.bronze.loader --start 8001 --end 16000
 
-      - name: 💾 Commit after batch 2
+      - name: Commit & Push bronze batch 2
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git lfs fetch --all && git lfs checkout
           git add storage/estate.db
-          # Гениальная защита от блокировки workflow permissions
           git restore --staged .github/workflows || true
-          git restore --staged .github/ || true
-          git commit -m "Bronze batch 2" || echo "No changes"
-          git push origin main --force-with-lease
+          git commit -m "bronze: batch 8001–16000" || echo "No changes"
+          git push origin main
           git lfs push --all origin main
 
-      - name: 📊 Check progress after batch 2
-        run: sqlite3 storage/estate.db "SELECT COUNT(*) FROM bronze_estate;"
-
-      #- name: 🟤 Bronze batch 3 (16001–24000)
-      #  run: python -m pipeline.bronze.loader --start 16001 --end 24000
-
-      #- name: 💾 Commit after batch 3
-      #  run: |
-      #    git config --global user.name "github-actions[bot]"
-      #    git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-      #    git add storage/estate.db
-      #    git commit -m "Bronze batch 3" || echo "No changes"
-      #    git push origin main --force-with-lease --no-verify
-      #    git lfs push --all origin main
-
-      #- name: 📊 Check progress after batch 3
-      #  run: sqlite3 storage/estate.db "SELECT COUNT(*) FROM bronze_estate;"
-
-      - name: 📎 Upload bronze logs
+      - name: Upload bronze logs
         uses: actions/upload-artifact@v4
         with:
           name: bronze-logs-${{ github.run_number }}
           path: logs/
 
+  # ==================================================================
   silver:
     needs: bronze
     runs-on: ubuntu-latest
     steps:
-      - name: 📥 Checkout repo
+      - name: Checkout + LFS
         uses: actions/checkout@v4
         with:
           lfs: true
+          fetch-depth: 0
 
-      - name: Setup Git LFS
-        run: git lfs install
-  
-      - name: Pull latest database after bronze
-        run: git lfs pull   # 👈 вместо checkout, подтягиваем LFS-объекты
+      - name: Setup Git LFS & pull
+        run: |
+          git lfs install
+          git lfs pull --all origin main
 
-      - name: 🐍 Set up Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - run: pip install -r requirements.txt
 
-      - name: 📦 Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: ⚙️ Silver → Supabase
+      - name: Silver → Supabase
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: python -m scripts.run_silver
 
-      - name: 📎 Upload silver logs
+      - name: Upload silver logs
         uses: actions/upload-artifact@v4
         with:
           name: silver-logs-${{ github.run_number }}
           path: logs/
 
+  # ==================================================================
   gold:
     needs: silver
     runs-on: ubuntu-latest
     steps:
-      - name: 📥 Checkout repo
+      - name: Checkout
         uses: actions/checkout@v4
         with:
-          lfs: true   # 👈 добавляем LFS для gold тоже
+          fetch-depth: 0
 
-      - name: Setup Git LFS
-        run: git lfs install
-
-      - name: 🐍 Set up Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - run: pip install -r requirements.txt
 
-      - name: 📦 Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: ✨ Gold → Supabase
+      - name: Gold → Supabase
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: python -m scripts.run_gold
 
-      - name: 📎 Upload gold logs
+      - name: Upload gold logs
         uses: actions/upload-artifact@v4
         with:
           name: gold-logs-${{ github.run_number }}
           path: logs/
-         
