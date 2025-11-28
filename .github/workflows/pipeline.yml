@@ -36,11 +36,14 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Setup Chrome + Driver
-        run: |
-          rm -rf ~/.local/share/undetected_chromedriver
-          browser-actions/setup-chrome@v1
-          nanasess/setup-chromedriver@v2
+      - name: Clear undetected_chromedriver cache
+        run: rm -rf ~/.local/share/undetected_chromedriver  # ← отдельно, чтобы не мешало
+
+      - name: Setup Chrome (with ChromeDriver)
+        uses: browser-actions/setup-chrome@v1  # ← v1 работает, но можно v2
+        with:
+          chrome-version: latest
+          install-chromedriver: true  # ← автоматически ставит совместимый ChromeDriver
 
       - name: Initialize DB
         run: python -m scripts.init_db
@@ -69,7 +72,7 @@ jobs:
           git add storage/estate.db
           git commit -m "raw_links: batch 101–200" || echo "No changes"
           git push origin main
-          git lct push --all origin main
+          git lfs push --all origin main
 
       # Добавляй остальные батчи точно так же
 
@@ -109,11 +112,14 @@ jobs:
           python-version: '3.11'
       - run: pip install -r requirements.txt
 
-      - name: Setup Chrome
-        run: |
-          rm -rf ~/.local/share/undetected_chromedriver
-          browser-actions/setup-chrome@v1
-          nanasess/setup-chromedriver@v2
+      - name: Clear undetected_chromedriver cache
+        run: rm -rf ~/.local/share/undetected_chromedriver
+
+      - name: Setup Chrome (with ChromeDriver)
+        uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: latest
+          install-chromedriver: true
 
       # Batch 1
       - name: Bronze 0–8000
