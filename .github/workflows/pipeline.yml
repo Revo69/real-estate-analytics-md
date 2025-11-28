@@ -219,3 +219,38 @@ jobs:
         with:
           name: silver-logs-${{ github.run_number }}
           path: logs/
+
+  gold:
+    needs: silver
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout repo
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 📦 Install dependencies
+        run: pip install supabase
+
+      - name: ✨ Refresh gold layer
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          python - <<'EOF'
+          import os
+          from supabase import create_client
+          supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
+          resp = supabase.rpc("refresh_gold_estate").execute()
+          print("Refresh result:", resp)
+          EOF
+
+      - name: 📎 Upload gold logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: gold-logs-${{ github.run_number }}
+          path: logs/
+          
