@@ -8,9 +8,14 @@ import logging
 from pipeline.gold import loader as gold_loader
 
 def main():
-    logging.info("Starting Gold loader...")
+    logging.basicConfig(
+        filename="logs/run_gold.log",
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+    )
+    logging.info("Run_gold started")
     gold_loader.main()
-    logging.info("Gold loader finished.")
+    logging.info("Run_gold finished")
 
 if __name__ == "__main__":
     main()
