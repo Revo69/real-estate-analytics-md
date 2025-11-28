@@ -40,16 +40,18 @@ jobs:
         run: python -m scripts.init_db
 
       # Run link loader in batches
-      - name: 🔗 Run links loader (pages 1-10)
+      - name: 🔗 Run links loader (pages 1-100)
         run: python -m pipeline.acquisition.links_loader --start 1 --end 100
 
       - name: 💾 Commit after batch 1
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git lfs fetch --all && git lfs checkout   # 👈 гарантируем наличие LFS-объектов
           git add storage/estate.db
           git commit -m "Update raw_links batch 1-100" || echo "No changes"
           git push origin main --force-with-lease --no-verify
+          git lfs push --all origin main            # 👈 отправляем LFS-объекты
 
       - name: 🔗 Run links loader (pages 101-200)
         run: python -m pipeline.acquisition.links_loader --start 101 --end 200
@@ -58,9 +60,11 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git lfs fetch --all && git lfs checkout
           git add storage/estate.db
           git commit -m "Update raw_links batch 101-200" || echo "No changes"
           git push origin main --force-with-lease --no-verify
+          git lfs push --all origin main
 
       #- name: 🔗 Run links loader (pages 201-300)
       #  run: python -m pipeline.acquisition.links_loader --start 201 --end 300
@@ -72,17 +76,19 @@ jobs:
       #    git add storage/estate.db
       #    git commit -m "Update raw_links batch 201-300" || echo "No changes"
       #    git push origin main --force-with-lease --no-verify
+      #    git lfs push --all origin main
 
       #- name: 🔗 Run links loader (pages 301-385)
       #  run: python -m pipeline.acquisition.links_loader --start 301 --end 385
 
       #- name: 💾 Commit after batch 4
       #  run: |
-      #   git config --global user.name "github-actions[bot]"
+      #    git config --global user.name "github-actions[bot]"
       #    git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
       #    git add storage/estate.db
-      #   git commit -m "Update raw_links batch 301-385" || echo "No changes"
+      #    git commit -m "Update raw_links batch 301-385" || echo "No changes"
       #    git push origin main --force-with-lease --no-verify
+      #    git lfs push --all origin main
 
       - name: 📊 Check raw_links count
         run: sqlite3 storage/estate.db "SELECT COUNT(*) FROM raw_links;"
@@ -128,12 +134,14 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git lfs fetch --all && git lfs checkout
           git add storage/estate.db
           # Гениальная защита от блокировки workflow permissions
           git restore --staged .github/workflows || true
           git restore --staged .github/ || true
           git commit -m "Bronze batch 1" || echo "No changes"
           git push origin main --force-with-lease
+          git lfs push --all origin main
 
       - name: 📊 Check progress after batch 1
         run: sqlite3 storage/estate.db "SELECT COUNT(*) FROM bronze_estate;"
@@ -145,12 +153,14 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git lfs fetch --all && git lfs checkout
           git add storage/estate.db
           # Гениальная защита от блокировки workflow permissions
           git restore --staged .github/workflows || true
           git restore --staged .github/ || true
-          git commit -m "Bronze batch 1" || echo "No changes"
+          git commit -m "Bronze batch 2" || echo "No changes"
           git push origin main --force-with-lease
+          git lfs push --all origin main
 
       - name: 📊 Check progress after batch 2
         run: sqlite3 storage/estate.db "SELECT COUNT(*) FROM bronze_estate;"
@@ -165,22 +175,9 @@ jobs:
       #    git add storage/estate.db
       #    git commit -m "Bronze batch 3" || echo "No changes"
       #    git push origin main --force-with-lease --no-verify
+      #    git lfs push --all origin main
 
       #- name: 📊 Check progress after batch 3
-      #  run: sqlite3 storage/estate.db "SELECT COUNT(*) FROM bronze_estate;"
-
-      #- name: 🟤 Bronze batch 4 (24001–32000)
-      #  run: python -m pipeline.bronze.loader --start 24001 --end 34000
-
-      #- name: 💾 Commit after batch 4
-      #  run: |
-      #    git config --global user.name "github-actions[bot]"
-      #    git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-      #    git add storage/estate.db
-      #    git commit -m "Bronze batch 4" || echo "No changes"
-      #    git push origin main --force-with-lease --no-verify
-
-      #- name: 📊 Check progress after batch 4
       #  run: sqlite3 storage/estate.db "SELECT COUNT(*) FROM bronze_estate;"
 
       - name: 📎 Upload bronze logs
@@ -202,9 +199,7 @@ jobs:
         run: git lfs install
   
       - name: Pull latest database after bronze
-        run: |
-          git fetch origin main
-          git checkout origin/main -- storage/estate.db
+        run: git lfs pull   # 👈 вместо checkout, подтягиваем LFS-объекты
 
       - name: 🐍 Set up Python
         uses: actions/setup-python@v5
@@ -232,6 +227,11 @@ jobs:
     steps:
       - name: 📥 Checkout repo
         uses: actions/checkout@v4
+        with:
+          lfs: true   # 👈 добавляем LFS для gold тоже
+
+      - name: Setup Git LFS
+        run: git lfs install
 
       - name: 🐍 Set up Python
         uses: actions/setup-python@v5
@@ -252,3 +252,4 @@ jobs:
         with:
           name: gold-logs-${{ github.run_number }}
           path: logs/
+         
