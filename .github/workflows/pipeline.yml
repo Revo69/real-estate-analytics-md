@@ -126,11 +126,14 @@ jobs:
 
       - name: 💾 Commit after batch 1
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add storage/estate.db
+          # Гениальная защита от блокировки workflow permissions
+          git restore --staged .github/workflows || true
+          git restore --staged .github/ || true
           git commit -m "Bronze batch 1" || echo "No changes"
-          git push origin main --force-with-lease --no-verify
+          git push origin main --force-with-lease
 
       - name: 📊 Check progress after batch 1
         run: sqlite3 storage/estate.db "SELECT COUNT(*) FROM bronze_estate;"
@@ -140,11 +143,14 @@ jobs:
 
       - name: 💾 Commit after batch 2
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add storage/estate.db
-          git commit -m "Bronze batch 2" || echo "No changes"
-          git push origin main --force-with-lease --no-verify
+          # Гениальная защита от блокировки workflow permissions
+          git restore --staged .github/workflows || true
+          git restore --staged .github/ || true
+          git commit -m "Bronze batch 1" || echo "No changes"
+          git push origin main --force-with-lease
 
       - name: 📊 Check progress after batch 2
         run: sqlite3 storage/estate.db "SELECT COUNT(*) FROM bronze_estate;"
