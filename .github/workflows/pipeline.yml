@@ -8,22 +8,27 @@ permissions:
   contents: write
 
 jobs:
+  # ==================================================================
+  # 1. Сбор ссылок (raw_links)
+  # ==================================================================
   links-loader:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout + Full LFS
+      - name: Checkout + Full history + LFS
         uses: actions/checkout@v4
         with:
           lfs: true
-          fetch-depth: 0                  # ← КРИТИЧНО для LFS push --all
+          fetch-depth: 0                  # Обязательно для git lfs push --all
 
       - name: Setup Git LFS
         run: git lfs install
 
-      - name: Pull all existing LFS objects
-        run: git lfs pull --all origin main   # гарантируем, что всё уже есть
+      - name: Download ALL existing LFS objects (актуально 2025)
+        run: |
+          git lfs fetch --all origin      # ← заменяет устаревший pull --all
+          git lfs checkout
 
-      - name: Set up Python
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -31,7 +36,7 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Clear ChromeDriver cache + Setup browser
+      - name: Setup Chrome + Driver
         run: |
           rm -rf ~/.local/share/undetected_chromedriver
           browser-actions/setup-chrome@v1
@@ -40,7 +45,7 @@ jobs:
       - name: Initialize DB
         run: python -m scripts.init_db
 
-      # ──────── Batch 1 ────────
+      # Batch 1
       - name: Links loader 1–100
         run: python -m pipeline.acquisition.links_loader --start 1 --end 100
 
@@ -51,9 +56,9 @@ jobs:
           git add storage/estate.db
           git commit -m "raw_links: batch 1–100" || echo "No changes"
           git push origin main
-          git lfs push --all origin main     # ← ГЛАВНАЯ СТРОКА — решает GH008 навсегда
+          git lfs push --all origin main
 
-      # ──────── Batch 2 ────────
+      # Batch 2
       - name: Links loader 101–200
         run: python -m pipeline.acquisition.links_loader --start 101 --end 200
 
@@ -64,9 +69,9 @@ jobs:
           git add storage/estate.db
           git commit -m "raw_links: batch 101–200" || echo "No changes"
           git push origin main
-          git lfs push --all origin main
+          git lct push --all origin main
 
-      # При необходимости раскомментируй остальные батчи по той же схеме
+      # Добавляй остальные батчи точно так же
 
       - name: Check raw_links count
         run: sqlite3 storage/estate.db "SELECT COUNT(*) FROM raw_links;"
@@ -77,6 +82,8 @@ jobs:
           name: links-logs-${{ github.run_number }}
           path: logs/
 
+  # ==================================================================
+  # 2. Парсинг объявлений (bronze)
   # ==================================================================
   bronze:
     needs: links-loader
@@ -91,8 +98,10 @@ jobs:
       - name: Setup Git LFS
         run: git lfs install
 
-      - name: Pull all LFS objects
-        run: git lfs pull --all origin main
+      - name: Download ALL LFS objects
+        run: |
+          git lfs fetch --all origin
+          git lfs checkout
 
       - name: Set up Python + deps
         uses: actions/setup-python@v5
@@ -116,6 +125,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add storage/estate.db
           git restore --staged .github/workflows || true
+          git restore --staged .github/ || true
           git commit -m "bronze: batch 0–8000" || echo "No changes"
           git push origin main
           git lfs push --all origin main
@@ -130,6 +140,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add storage/estate.db
           git restore --staged .github/workflows || true
+          git restore --staged .github/ || true
           git commit -m "bronze: batch 8001–16000" || echo "No changes"
           git push origin main
           git lfs push --all origin main
@@ -141,6 +152,8 @@ jobs:
           path: logs/
 
   # ==================================================================
+  # 3. Silver → Supabase
+  # ==================================================================
   silver:
     needs: bronze
     runs-on: ubuntu-latest
@@ -151,10 +164,11 @@ jobs:
           lfs: true
           fetch-depth: 0
 
-      - name: Setup Git LFS & pull
+      - name: Setup Git LFS + download objects
         run: |
           git lfs install
-          git lfs pull --all origin main
+          git lfs fetch --all origin
+          git lfs checkout
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -174,6 +188,8 @@ jobs:
           name: silver-logs-${{ github.run_number }}
           path: logs/
 
+  # ==================================================================
+  # 4. Gold → Supabase
   # ==================================================================
   gold:
     needs: silver
