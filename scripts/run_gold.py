@@ -1,13 +1,16 @@
-import os
-from supabase import create_client
+#!/usr/bin/env python3
+"""
+CLI entrypoint for running the Gold loader.
+Refreshes materialized view gold_estate_current and updates gold_estate_daily in Supabase.
+"""
+
+import logging
+from pipeline.gold import loader as gold_loader
 
 def main():
-    url = os.environ["SUPABASE_URL"]
-    key = os.environ["SUPABASE_SERVICE_ROLE"]  # именно service_role
-    supabase = create_client(url, key)
-
-    resp = supabase.rpc("refresh_gold_estate").execute()
-    print("Refresh result:", resp)
+    logging.info("Starting Gold loader...")
+    gold_loader.main()
+    logging.info("Gold loader finished.")
 
 if __name__ == "__main__":
     main()
