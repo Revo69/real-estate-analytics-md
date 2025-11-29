@@ -7,6 +7,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 from supabase import create_client, Client
 from .mappings import MONTHS_MAP
+from typing import Any
 from pipeline.silver.normalizers import (
     normalize_number_of_rooms,
     normalize_living_room,
@@ -70,15 +71,22 @@ def parse_publication_date(raw_date: str):
         logging.error(f"Failed to parse publication_date '{raw_date}': {e}")
         return None
 
-def safe_json_loads(raw: str) -> dict:
-    """Safely parse JSON string, return {} if invalid."""
-    if raw is None or str(raw).strip() == "":
+def safe_json_loads(raw: Any) -> dict:
+    if not raw:
         return {}
+    if isinstance(raw, dict):
+        return raw
+    if isinstance(raw, str):
+        raw = raw.strip()
+        if raw in ("", "null", "None"):
+            return {}
     try:
-        return json.loads(raw)
-    except Exception as e:  
-        logging.warning(f"Invalid JSON skipped: {raw!r} | {e}")
+        parsed = json.loads(raw)
+        return parsed if isinstance(parsed, dict) else {}
+    except (json.JSONDecodeError, TypeError, ValueError) as e:
+        logging.warning(f"Invalid JSON skipped: {raw!r} → {e}")
         return {}
+
 
 def transform_record(row):
     """Transform bronze_estate row into silver_estate payload for Supabase."""
