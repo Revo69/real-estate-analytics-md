@@ -52,7 +52,13 @@ def parse_publication_date(raw_date: str):
     if not raw_date:
         return None
     try:
-        raw_date = raw_date.replace("Дата обновления:", "").strip()
+        #raw_date = raw_date.replace("Дата обновления:", "").strip()
+
+        for prefix in ("Дата обновления:", "Дата публикации:"):
+            if raw_date.startswith(prefix):
+                raw_date = raw_date.replace(prefix, "").strip()
+                break
+
         date_part, time_part = raw_date.split(",")
         day, month_str, year = date_part.strip().split(" ")
         month = MONTHS_MAP.get(month_str.lower())
