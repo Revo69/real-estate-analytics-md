@@ -48,36 +48,7 @@ jobs:
       - name: Initialize DB
         run: python -m scripts.init_db
 
-      - name: Run links loader (все батчи)
-        run: |
-          python -m pipeline.acquisition.links_loader --start 1 --end 100
-          python -m pipeline.acquisition.links_loader --start 101 --end 200
-          # раскомментируй при необходимости:
-          # python -m pipeline.acquisition.links_loader --start 201 --end 300
-          # python -m pipeline.acquisition.links_loader --start 301 --end 385
 
-      - name: Upload updated DB как artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: estate-db-after-links
-          path: storage/estate.db
-
-      - name: Check if DB changed
-        id: check
-        run: |
-          git add storage/estate.db
-          if git diff --staged --quiet; then
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-          else
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-            git reset  # не коммитим здесь — только проверяем
-          fi
-
-      - name: Upload logs
-        uses: actions/upload-artifact@v4
-        with:
-          name: logs-links-${{ github.run_number }}
-          path: logs/
 
   # ==============================================================
   # 2. Bronze-парсинг → берёт DB из artifact → заливает обратно
@@ -101,56 +72,7 @@ jobs:
           git lfs fetch --all origin
           git lfs checkout
 
-      - name: Download DB после сбора ссылок
-        uses: actions/download-artifact@v4
-        with:
-          name: estate-db-after-links
-          path: storage/
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: Clear cache + Setup Chrome
-        run: rm -rf ~/.local/share/undetected_chromedriver
-      - uses: browser-actions/setup-chrome@v1
-        with:
-          install-chromedriver: true
-
-      - name: Run bronze loader (все батчи)
-        run: |
-          python -m pipeline.bronze.loader --start 0 --end 8000
-          python -m pipeline.bronze.loader --start 8001 --end 16000
-          # раскомментируй при росте данных:
-          # python -m pipeline.bronze.loader --start 16001 --end 24000
-          # python -m pipeline.bronze.loader --start 24001 --end 32000
-
-      - name: Upload final DB как artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: estate-db-final
-          path: storage/estate.db
-
-      - name: Check if bronze что-то добавил
-        id: check
-        run: |
-          git add storage/estate.db
-          if git diff --staged --quiet; then
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-          else
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-            git reset
-          fi
-
-      - name: Upload bronze logs
-        uses: actions/upload-artifact@v4
-        with:
-          name: logs-bronze-${{ github.run_number }}
-          path: logs/
 
   # ==============================================================
   # 3. ЕДИНСТВЕННЫЙ job, который делает commit + push
@@ -174,28 +96,6 @@ jobs:
           git lfs fetch --all origin
           git lfs checkout
 
-      - name: Download финальную базу
-        uses: actions/download-artifact@v4
-        with:
-          name: estate-db-final
-          path: storage/
-
-      - name: Commit & Push (один раз и навсегда)
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git add storage/estate.db
-          git commit -m "Daily update: links + bronze (run #${{ github.run_number }})" || echo "No changes to commit"
-
-          git push origin main
-          git lfs push --all origin main
-
-      - name: Upload final logs
-        uses: actions/upload-artifact@v4
-        with:
-          name: logs-final-${{ github.run_number }}
-          path: logs/
 
   # ==============================================================
   # 4. Silver → Supabase
