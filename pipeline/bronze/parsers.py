@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 from .mappings import MAIN_FEATURES_MAP, ADDITIONAL_FEATURES_MAP
 from typing import Dict, Optional
 
+
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
 }
@@ -82,46 +83,47 @@ def extract_text(soup, selector, key_name, mapping=None, normalize=True, remove_
 
     return {key_name: text}
 
+def clean_number(num_str: str) -> int:
+    """Очистить строку числа от пробелов и неразрывных пробелов."""
+    return int(num_str.replace(" ", "").replace("\u00A0", ""))
 
 def extract_all_prices(soup: BeautifulSoup) -> Dict[str, Optional[int]]:
     result = {"mdl": None, "eur": None, "usd": None}
 
-    # --- main price ---
-    main_tag = soup.select_one("span.styles_footer__main__8seZ7")
-    if main_tag:
-        main_text = main_tag.get_text(strip=True)
-        if "MDL" in main_text:
-            match = re.search(r"([\d\s]+)\s*MDL", main_text)
-            if match:
-                result["mdl"] = int(match.group(1).replace(" ", ""))
-        elif "€" in main_text:
-            match = re.search(r"([\d\s]+)\s*€", main_text)
-            if match:
-                result["eur"] = int(match.group(1).replace(" ", ""))
-        elif "$" in main_text:
-            match = re.search(r"([\d\s]+)\s*\$", main_text)
-            if match:
-                result["usd"] = int(match.group(1).replace(" ", ""))
+    # --- 1. Основная цена (ищем в контейнере) ---
+    main_container = soup.find("div", class_="styles_footer__2HvVf")
+    if main_container:
+        text = main_container.get_text(" ", strip=True)
 
-    # --- converted prices ---
-    converted_tags = soup.select("ul.styles_footer__converted__kKoJd li")
-    for li in converted_tags:
-        text = li.get_text(strip=True)
+        eur_match = re.search(r"([\d\s\u00A0]+)\s*€", text)
+        usd_match = re.search(r"([\d\s\u00A0]+)\s*\$", text)
+        mdl_match = re.search(r"([\d\s\u00A0]+)\s*MDL", text)
+
+        if eur_match:
+            result["eur"] = clean_number(eur_match.group(1))
+        if usd_match:
+            result["usd"] = clean_number(usd_match.group(1))
+        if mdl_match:
+            result["mdl"] = clean_number(mdl_match.group(1))
+
+    # --- 2. Converted цены (fallback) ---
+    for li in soup.select("ul.styles_footer__converted__kKoJd li"):
+        text = li.get_text(" ", strip=True)
 
         if "€" in text and result["eur"] is None:
-            match = re.search(r"≈\s*([\d\s]+)\s*€", text)
-            if match:
-                result["eur"] = int(match.group(1).replace(" ", ""))
+            m = re.search(r"([\d\s\u00A0]+)\s*€", text)
+            if m:
+                result["eur"] = clean_number(m.group(1))
 
         elif "$" in text and result["usd"] is None:
-            match = re.search(r"≈\s*([\d\s]+)\s*\$", text)
-            if match:
-                result["usd"] = int(match.group(1).replace(" ", ""))
+            m = re.search(r"([\d\s\u00A0]+)\s*\$", text)
+            if m:
+                result["usd"] = clean_number(m.group(1))
 
         elif "MDL" in text and result["mdl"] is None:
-            match = re.search(r"≈\s*([\d\s]+)\s*MDL", text)
-            if match:
-                result["mdl"] = int(match.group(1).replace(" ", ""))
+            m = re.search(r"([\d\s\u00A0]+)\s*MDL", text)
+            if m:
+                result["mdl"] = clean_number(m.group(1))
 
     return result
 
