@@ -76,7 +76,7 @@ def safe_json_loads(raw: str) -> dict:
         return {}
     try:
         return json.loads(raw)
-    except (json.JSONDecodeError, TypeError, ValueError) as e:
+    except Exception as e:  
         logging.warning(f"Invalid JSON skipped: {raw!r} | {e}")
         return {}
 
