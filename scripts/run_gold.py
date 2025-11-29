@@ -5,9 +5,13 @@ Refreshes materialized view gold_estate_current and updates gold_estate_daily in
 """
 
 import logging
+import os
 from pipeline.gold import loader as gold_loader
 
 def main():
+    # гарантируем наличие директории logs/
+    os.makedirs("logs", exist_ok=True)
+
     logging.basicConfig(
         filename="logs/run_gold.log",
         level=logging.INFO,
