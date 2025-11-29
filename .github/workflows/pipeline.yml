@@ -48,10 +48,10 @@ jobs:
       - name: Initialize DB
         run: python -m scripts.init_db
 
-      - name: Run links loader (все батчи)
-        run: |
-          python -m pipeline.acquisition.links_loader --start 1 --end 100
-          python -m pipeline.acquisition.links_loader --start 101 --end 200
+      #- name: Run links loader (все батчи)
+      #  run: |
+      #    python -m pipeline.acquisition.links_loader --start 1 --end 100
+      #    python -m pipeline.acquisition.links_loader --start 101 --end 200
           # раскомментируй при необходимости:
           # python -m pipeline.acquisition.links_loader --start 201 --end 300
           # python -m pipeline.acquisition.links_loader --start 301 --end 385
@@ -121,10 +121,10 @@ jobs:
         with:
           install-chromedriver: true
 
-      - name: Run bronze loader (все батчи)
-        run: |
-          python -m pipeline.bronze.loader --start 0 --end 8000
-          python -m pipeline.bronze.loader --start 8001 --end 16000
+     # - name: Run bronze loader (все батчи)
+     #   run: |
+     #     python -m pipeline.bronze.loader --start 0 --end 8000
+     #     python -m pipeline.bronze.loader --start 8001 --end 16000
           # раскомментируй при росте данных:
           # python -m pipeline.bronze.loader --start 16001 --end 24000
           # python -m pipeline.bronze.loader --start 24001 --end 32000
