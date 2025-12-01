@@ -5,7 +5,7 @@ Business logic for Gold layer aggregation.
 import os
 import logging
 from supabase import create_client
-from typing import Any
+from typing import Any, Dict
 
 def get_client():
     url = os.environ["SUPABASE_URL"]
@@ -17,7 +17,7 @@ def refresh_gold_estate():
     client = get_client()
     logging.info("Calling Supabase RPC: refresh_gold_estate")
     resp = client.rpc("refresh_gold_estate").execute()
-    logging.info("refresh_gold_estate → %s", resp)
+    logging.info("refresh_gold_estate → success")
     return resp
 
 def refresh_gold_rent():
@@ -25,12 +25,12 @@ def refresh_gold_rent():
     client = get_client()
     logging.info("Calling Supabase RPC: refresh_gold_rent")
     resp = client.rpc("refresh_gold_rent").execute()
-    logging.info("refresh_gold_rent → %s", resp)
+    logging.info("refresh_gold_rent → success")
     return resp
 
-def refresh() -> dict[str, Any]:
+def refresh() -> Dict[str, Any]:
     """
-    Главная функция — обновляет gold одним вызовом.
+    Главная функция — обновляет ВСЁ Gold одним вызовом.
     Используется в run_gold.py
     """
     results = {}
@@ -47,6 +47,10 @@ def refresh() -> dict[str, Any]:
         logging.error("Failed to refresh rent gold: %s", e)
         results["rent"] = {"error": str(e)}
 
-    # Опционально: можно добавить yield, но он VIEW → обновляется сам
     logging.info("All Gold layers refreshed successfully")
     return results
+
+# Для локального теста: python -m pipeline.gold.aggregator
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+    refresh()
