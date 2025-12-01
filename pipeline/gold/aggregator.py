@@ -30,7 +30,7 @@ def refresh_gold_rent():
 
 def refresh() -> Dict[str, Any]:
     """
-    Главная функция — обновляет ВСЁ Gold одним вызовом.
+    Главная функция — обновляет Gold одним вызовом.
     Используется в run_gold.py
     """
     results = {}
