@@ -53,7 +53,7 @@ graph TD
 | Raw     | Deduplicated queue of listing URLs for acquisition                      | `raw_links` (SQLite)|
 | Bronze  | Parsed listings with structured fields + embedded JSON (prices, features)| `bronze_estate` (SQLite) |
 | Silver  | Normalized records for analytics and dashboards                         | `silver_estate` (Supabase/Postgres) |
-| Gold    | Aggregated, analytics‑ready datasets (KPIs, trends, predictive models)  | Planned (future)         |
+| Gold    | Aggregated, analytics‑ready datasets (KPIs, trends, predictive models)  | `gold_estate_current` (Supabase/Postgres) |
 
 ---
 
