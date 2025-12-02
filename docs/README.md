@@ -138,7 +138,7 @@ This design ensures:
 python -m scripts.run_links_loader --start 1 --end 100
 python -m scripts.run_bronze
 python -m scripts.run_silver
-# Gold layer (analytics-ready datasets) is planned but not yet implemented
+python -m scripts.run_gold
 ```
 
 Or let **GitHub Actions** orchestrate it automatically via  
@@ -160,10 +160,10 @@ Or let **GitHub Actions** orchestrate it automatically via
 - `storage/estate.db` — local **SQLite** database containing Bronze and Silver layers  
 - `raw_links` — deduplicated queue of listing URLs for acquisition  
 - `bronze_estate` — parsed listings table with structured fields and embedded JSON (prices, features)  
-- `silver_estate` — normalized records stored in **Supabase/Postgres** for downstream analytics  
+- `silver_estate` — normalized records stored in **Supabase/Postgres** for downstream analytics
+- `gold_estate_current` — curated, aggregated, and cleaned records stored in **Supabase/Postgres** representing the latest state of the real estate market.  
 - `logs/` — pipeline execution logs, uploaded as artifacts in CI/CD  
 
 ---
 
-✅ This version makes it clear that the Gold layer is **planned but not implemented yet**, while keeping the architecture and usage instructions consistent with your current pipeline.
 
