@@ -37,13 +37,36 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Clear undetected_chromedriver cache
+      - name: Install latest stable Google Chrome
+        uses: browser-actions/setup-chrome@stable
+        id: chrome
+
+      - name: Fully clear old undetected_chromedriver cache (очень важно!)
         run: rm -rf ~/.local/share/undetected_chromedriver
 
-      - name: Setup Chrome + ChromeDriver
-        uses: browser-actions/setup-chrome@v1
-        with:
-          install-chromedriver: true
+      - name: Detect actual Chrome major version
+        run: |
+          CHROME_FULL=$(google-chrome --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' || echo "142.0.0.0")
+          MAJOR=$(echo $CHROME_FULL | cut -d. -f1)
+          echo "Detected Chrome version: $CHROME_FULL → using major version $MAJOR"
+          echo "CHROME_MAJOR_VERSION=$MAJOR" >> $GITHUB_ENV
+
+      - name: Force undetected_chromedriver to use exactly this Chrome version
+        run: |
+          mkdir -p ~/.local/share/undetected_chromedriver
+          echo "$CHROME_MAJOR_VERSION" > ~/.local/share/undetected_chromedriver/VERSION
+
+      - name: Pre-download correct driver (warm-up) — можно убрать, но с ним надёжнее
+        run: |
+          python - <<'EOF'
+          import undetected_chromedriver as uc
+          try:
+              print("Pre-downloading ChromeDriver for Chrome", uc.find_chrome_executable())
+              uc.Chrome(headless=True, version_main=int(open(os.path.expanduser("~/.local/share/undetected_chromedriver/VERSION")).read().strip()))
+              print("Correct ChromeDriver successfully pre-downloaded")
+          except Exception as e:
+              print("Warm-up failed (not critical):", e)
+          EOF
 
       - name: Initialize DB
         run: python -m scripts.init_db
@@ -115,11 +138,37 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Clear cache + Setup Chrome
+
+      - name: Install latest stable Google Chrome
+        uses: browser-actions/setup-chrome@stable
+        id: chrome
+
+      - name: Fully clear old undetected_chromedriver cache (очень важно!)
         run: rm -rf ~/.local/share/undetected_chromedriver
-      - uses: browser-actions/setup-chrome@v1
-        with:
-          install-chromedriver: true
+
+      - name: Detect actual Chrome major version
+        run: |
+          CHROME_FULL=$(google-chrome --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' || echo "142.0.0.0")
+          MAJOR=$(echo $CHROME_FULL | cut -d. -f1)
+          echo "Detected Chrome version: $CHROME_FULL → using major version $MAJOR"
+          echo "CHROME_MAJOR_VERSION=$MAJOR" >> $GITHUB_ENV
+
+      - name: Force undetected_chromedriver to use exactly this Chrome version
+        run: |
+          mkdir -p ~/.local/share/undetected_chromedriver
+          echo "$CHROME_MAJOR_VERSION" > ~/.local/share/undetected_chromedriver/VERSION
+
+      - name: Pre-download correct driver (warm-up) — можно убрать, но с ним надёжнее
+        run: |
+          python - <<'EOF'
+          import undetected_chromedriver as uc
+          try:
+              print("Pre-downloading ChromeDriver for Chrome", uc.find_chrome_executable())
+              uc.Chrome(headless=True, version_main=int(open(os.path.expanduser("~/.local/share/undetected_chromedriver/VERSION")).read().strip()))
+              print("Correct ChromeDriver successfully pre-downloaded")
+          except Exception as e:
+              print("Warm-up failed (not critical):", e)
+          EOF
 
       - name: Run bronze loader (все батчи)
         run: |
