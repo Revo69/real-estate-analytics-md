@@ -90,10 +90,10 @@ def clean_number(num_str: str) -> int:
 def extract_all_prices(soup: BeautifulSoup) -> Dict[str, Optional[int]]:
     result = {"mdl": None, "eur": None, "usd": None}
 
-    # --- 1. Основная цена (ищем в контейнере) ---
-    main_container = soup.find("div", class_="styles_footer__2HvVf")
-    if main_container:
-        text = main_container.get_text(" ", strip=True)
+    # --- 1. Основная цена ---
+    main_span = soup.find("span", class_="styles_footer__main__8seZ7")
+    if main_span:
+        text = main_span.get_text(" ", strip=True)
 
         eur_match = re.search(r"([\d\s\u00A0]+)\s*€", text)
         usd_match = re.search(r"([\d\s\u00A0]+)\s*\$", text)
@@ -106,26 +106,24 @@ def extract_all_prices(soup: BeautifulSoup) -> Dict[str, Optional[int]]:
         if mdl_match:
             result["mdl"] = clean_number(mdl_match.group(1))
 
-    # --- 2. Converted цены (fallback) ---
+    # --- 2. Конвертированные цены ---
     for li in soup.select("ul.styles_footer__converted__kKoJd li"):
         text = li.get_text(" ", strip=True)
 
-        if "€" in text and result["eur"] is None:
-            m = re.search(r"([\d\s\u00A0]+)\s*€", text)
-            if m:
-                result["eur"] = clean_number(m.group(1))
+        m_eur = re.search(r"([\d\s\u00A0]+)\s*€", text)
+        if m_eur:
+            result["eur"] = clean_number(m_eur.group(1))
 
-        elif "$" in text and result["usd"] is None:
-            m = re.search(r"([\d\s\u00A0]+)\s*\$", text)
-            if m:
-                result["usd"] = clean_number(m.group(1))
+        m_usd = re.search(r"([\d\s\u00A0]+)\s*\$", text)
+        if m_usd:
+            result["usd"] = clean_number(m_usd.group(1))
 
-        elif "MDL" in text and result["mdl"] is None:
-            m = re.search(r"([\d\s\u00A0]+)\s*MDL", text)
-            if m:
-                result["mdl"] = clean_number(m.group(1))
+        m_mdl = re.search(r"([\d\s\u00A0]+)\s*MDL", text)
+        if m_mdl:
+            result["mdl"] = clean_number(m_mdl.group(1))
 
     return result
+
 
 
 def parse_features(url: str) -> dict:
