@@ -41,23 +41,30 @@ DB_PATH = os.path.join("storage", "estate.db")
 
 def init_driver():
     options = uc.ChromeOptions()
-    # эмуляция обычного пользователя
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
-    options.add_argument("--headless=new")   # headless для CI
+    options.add_argument("--headless=new")
     options.add_argument("--window-size=1920,1080")
     options.add_argument("--lang=ru-RU")
-    options.add_argument(
-        "user-agent=Mozilla/5.0 (X11; Linux x86_64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/120.0.0.0 Safari/537.36"
-    )
 
-    # ⚠️ Не указываем driver_executable_path, чтобы uc сам скачал драйвер в ~/.local/share
-    driver = uc.Chrome(options=options, use_subprocess=True)
+    # динамический user-agent
+    from shutil import which
+    import subprocess
+    chrome_path = which("google-chrome") or "/usr/bin/google-chrome"
+    chrome_version = subprocess.check_output([chrome_path, "--version"]).decode().strip()
+    major_version = int(chrome_version.split()[2].split(".")[0])
+    options.add_argument(f"user-agent=Mozilla/5.0 (X11; Linux x86_64) "
+                         f"AppleWebKit/537.36 (KHTML, like Gecko) "
+                         f"Chrome/{major_version}.0.0.0 Safari/537.36")
+
+    driver = uc.Chrome(options=options,
+                       version_main=major_version,
+                       browser_executable_path=chrome_path,
+                       use_subprocess=True)
     return driver
+
 
 
 def fetch_links_from_page(page: int) -> list[str]:
