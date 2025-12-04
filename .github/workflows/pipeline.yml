@@ -38,7 +38,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Install latest stable Google Chrome
-        uses: browser-actions/setup-chrome@stable
+        uses: browser-actions/setup-chrome@v1
         id: chrome
 
       - name: Fully clear old undetected_chromedriver cache (очень важно!)
@@ -140,7 +140,7 @@ jobs:
 
 
       - name: Install latest stable Google Chrome
-        uses: browser-actions/setup-chrome@stable
+        uses: browser-actions/setup-chrome@v1
         id: chrome
 
       - name: Fully clear old undetected_chromedriver cache (очень важно!)
