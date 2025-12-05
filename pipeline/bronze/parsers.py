@@ -95,16 +95,18 @@ def extract_all_prices(soup: BeautifulSoup) -> Dict[str, Optional[int]]:
     if main_span:
         text = main_span.get_text(" ", strip=True)
 
-        eur_match = re.search(r"([\d\s\u00A0]+)\s*€", text)
-        usd_match = re.search(r"([\d\s\u00A0]+)\s*\$", text)
-        mdl_match = re.search(r"([\d\s\u00A0]+)\s*MDL", text)
-
-        if eur_match:
-            result["eur"] = clean_number(eur_match.group(1))
-        if usd_match:
-            result["usd"] = clean_number(usd_match.group(1))
-        if mdl_match:
-            result["mdl"] = clean_number(mdl_match.group(1))
+        if "€" in text:
+            m = re.search(r"([\d\s\u00A0]+)", text)
+            if m:
+                result["eur"] = clean_number(m.group(1))
+        elif "$" in text:
+            m = re.search(r"([\d\s\u00A0]+)", text)
+            if m:
+                result["usd"] = clean_number(m.group(1))
+        elif "MDL" in text:
+            m = re.search(r"([\d\s\u00A0]+)", text)
+            if m:
+                result["mdl"] = clean_number(m.group(1))
 
     # --- 2. Конвертированные цены ---
     for li in soup.select("ul.styles_footer__converted__kKoJd li"):
@@ -121,9 +123,7 @@ def extract_all_prices(soup: BeautifulSoup) -> Dict[str, Optional[int]]:
         m_mdl = re.search(r"([\d\s\u00A0]+)\s*MDL", text)
         if m_mdl:
             result["mdl"] = clean_number(m_mdl.group(1))
-
     return result
-
 
 
 def parse_features(url: str) -> dict:
@@ -163,5 +163,6 @@ def parse_features(url: str) -> dict:
 
         return features
 
+    
     except Exception as e:
         return {"url": url, "status": f"error: {e}"}
