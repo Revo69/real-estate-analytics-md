@@ -1,33 +1,24 @@
 name: Real Estate Pipeline
+
 on:
   schedule:
-    - cron: '0 2 * * *'   # Каждый день в 02:00 UTC
+    - cron: '0 2 * * *'   # каждый день в 02:00 UTC
   workflow_dispatch:
 
 permissions:
   contents: write
-  actions: write   # нужен для download-artifact в том же workflow
+  actions: write
 
 jobs:
   # ==============================================================
-  # 1. Сбор ссылок → только обновляет DB → заливает как artifact
+  # 1. Сбор ссылок
   # ==============================================================
   collect-links:
     runs-on: ubuntu-latest
     outputs:
       has_changes: ${{ steps.check.outputs.has_changes }}
     steps:
-      - name: Checkout + Full LFS
-        uses: actions/checkout@v4
-        with:
-          lfs: true
-          fetch-depth: 0
-
-      - name: Setup Git LFS + download all objects
-        run: |
-          git lfs install
-          git lfs fetch --all origin
-          git lfs checkout
+      - uses: actions/checkout@v4
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -37,157 +28,36 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Install latest stable Google Chrome
-        uses: browser-actions/setup-chrome@v1
-        id: chrome
+      - name: Install latest stable Chrome + auto-matched driver
+        uses: browser-actions/setup-chrome@v2
+        with:
+          chrome-version: stable
 
-      - name: Fully clear old undetected_chromedriver cache (очень важно!)
-        run: rm -rf ~/.local/share/undetected_chromedriver
-
-      - name: Detect actual Chrome major version
+      - name: Clean & force correct undetected-chromedriver version
         run: |
-          CHROME_FULL=$(google-chrome --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' || echo "142.0.0.0")
-          MAJOR=$(echo $CHROME_FULL | cut -d. -f1)
-          echo "Detected Chrome version: $CHROME_FULL → using major version $MAJOR"
-          echo "CHROME_MAJOR_VERSION=$MAJOR" >> $GITHUB_ENV
-
-      - name: Force undetected_chromedriver to use exactly this Chrome version
-        run: |
+          rm -rf ~/.local/share/undetected_chromedriver
+          MAJOR=$(google-chrome --version | grep -oE '[0-9]+' | head -1)
           mkdir -p ~/.local/share/undetected_chromedriver
-          echo "$CHROME_MAJOR_VERSION" > ~/.local/share/undetected_chromedriver/VERSION
-
-      - name: Pre-download correct driver (warm-up) — можно убрать, но с ним надёжнее
-        run: |
-          python - <<'EOF'
-          import undetected_chromedriver as uc
-          try:
-              print("Pre-downloading ChromeDriver for Chrome", uc.find_chrome_executable())
-              uc.Chrome(headless=True, version_main=int(open(os.path.expanduser("~/.local/share/undetected_chromedriver/VERSION")).read().strip()))
-              print("Correct ChromeDriver successfully pre-downloaded")
-          except Exception as e:
-              print("Warm-up failed (not critical):", e)
-          EOF
+          echo "$MAJOR" > ~/.local/share/undetected_chromedriver/VERSION
 
       - name: Initialize DB
         run: python -m scripts.init_db
 
-      - name: Run links loader (все батчи)
+      - name: Run links loader
         run: |
           python -m pipeline.acquisition.links_loader --start 1 --end 100
           python -m pipeline.acquisition.links_loader --start 101 --end 200
-          # раскомментируй при необходимости:
-          # python -m pipeline.acquisition.links_loader --start 201 --end 300
-          # python -m pipeline.acquisition.links_loader --start 301 --end 385
 
-      - name: Upload updated DB как artifact
+      - name: Upload DB after links
         uses: actions/upload-artifact@v4
         with:
           name: estate-db-after-links
           path: storage/estate.db
 
-      - name: Check if DB changed
+      - name: Check if anything changed
         id: check
         run: |
-          git add storage/estate.db
-          if git diff --staged --quiet; then
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-          else
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-            git reset  # не коммитим здесь — только проверяем
-          fi
-
-      - name: Upload logs
-        uses: actions/upload-artifact@v4
-        with:
-          name: logs-links-${{ github.run_number }}
-          path: logs/
-
-  # ==============================================================
-  # 2. Bronze-парсинг → берёт DB из artifact → заливает обратно
-  # ==============================================================
-  parse-bronze:
-    needs: collect-links
-    if: ${{ needs.collect-links.outputs.has_changes == 'true' }}
-    runs-on: ubuntu-latest
-    outputs:
-      has_bronze_changes: ${{ steps.check.outputs.has_changes }}
-    steps:
-      - name: Checkout + Full LFS
-        uses: actions/checkout@v4
-        with:
-          lfs: true
-          fetch-depth: 0
-
-      - name: Setup Git LFS + pull all
-        run: |
-          git lfs install
-          git lfs fetch --all origin
-          git lfs checkout
-
-      - name: Download DB после сбора ссылок
-        uses: actions/download-artifact@v4
-        with:
-          name: estate-db-after-links
-          path: storage/
-
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
-
-      - name: Install latest stable Google Chrome
-        uses: browser-actions/setup-chrome@v1
-        id: chrome
-
-      - name: Fully clear old undetected_chromedriver cache (очень важно!)
-        run: rm -rf ~/.local/share/undetected_chromedriver
-
-      - name: Detect actual Chrome major version
-        run: |
-          CHROME_FULL=$(google-chrome --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' || echo "142.0.0.0")
-          MAJOR=$(echo $CHROME_FULL | cut -d. -f1)
-          echo "Detected Chrome version: $CHROME_FULL → using major version $MAJOR"
-          echo "CHROME_MAJOR_VERSION=$MAJOR" >> $GITHUB_ENV
-
-      - name: Force undetected_chromedriver to use exactly this Chrome version
-        run: |
-          mkdir -p ~/.local/share/undetected_chromedriver
-          echo "$CHROME_MAJOR_VERSION" > ~/.local/share/undetected_chromedriver/VERSION
-
-      - name: Pre-download correct driver (warm-up) — можно убрать, но с ним надёжнее
-        run: |
-          python - <<'EOF'
-          import undetected_chromedriver as uc
-          try:
-              print("Pre-downloading ChromeDriver for Chrome", uc.find_chrome_executable())
-              uc.Chrome(headless=True, version_main=int(open(os.path.expanduser("~/.local/share/undetected_chromedriver/VERSION")).read().strip()))
-              print("Correct ChromeDriver successfully pre-downloaded")
-          except Exception as e:
-              print("Warm-up failed (not critical):", e)
-          EOF
-
-      - name: Run bronze loader (все батчи)
-        run: |
-          python -m pipeline.bronze.loader --start 0 --end 8000
-          python -m pipeline.bronze.loader --start 8001 --end 16000
-          # раскомментируй при росте данных:
-          # python -m pipeline.bronze.loader --start 16001 --end 24000
-          # python -m pipeline.bronze.loader --start 24001 --end 32000
-
-      - name: Upload final DB как artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: estate-db-final
-          path: storage/estate.db
-
-      - name: Check if bronze что-то добавил
-        id: check
-        run: |
-          git add storage/estate.db
+          git add storage/estate.db 2>/dev/null || true
           if git diff --staged --quiet; then
             echo "has_changes=false" >> $GITHUB_OUTPUT
           else
@@ -195,56 +65,72 @@ jobs:
             git reset
           fi
 
-      - name: Upload bronze logs
+  # ==============================================================
+  # 2. Bronze-парсинг
+  # ==============================================================
+  parse-bronze:
+    needs: collect-links
+    if: needs.collect-links.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: estate-db-after-links
+          path: storage/
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install Chrome + force correct driver
+        uses: browser-actions/setup-chrome@v2
+        with:
+          chrome-version: stable
+      - run: |
+          rm -rf ~/.local/share/undetected_chromedriver
+          MAJOR=$(google-chrome --version | grep -oE '[0-9]+' | head -1)
+          mkdir -p ~/.local/share/undetected_chromedriver
+          echo "$MAJOR" > ~/.local/share/undetected_chromedriver/VERSION
+
+      - name: Run bronze loader
+        run: |
+          python -m pipeline.bronze.loader --start 0 --end 8000
+          python -m pipeline.bronze.loader --start 8001 --end 16000
+
+      - name: Upload final DB
         uses: actions/upload-artifact@v4
         with:
-          name: logs-bronze-${{ github.run_number }}
-          path: logs/
+          name: estate-db-final
+          path: storage/estate.db
 
   # ==============================================================
-  # 3. ЕДИНСТВЕННЫЙ job, который делает commit + push
+  # 3. Commit & Push только при наличии изменений
   # ==============================================================
   commit-and-push:
     needs: [collect-links, parse-bronze]
-    if: >
-      needs.collect-links.outputs.has_changes == 'true' ||
-      needs.parse-bronze.outputs.has_bronze_changes == 'true'
+    if: needs.collect-links.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout + Full LFS
-        uses: actions/checkout@v4
-        with:
-          lfs: true
-          fetch-depth: 0
+      - uses: actions/checkout@v4
 
-      - name: Setup Git LFS
-        run: |
-          git lfs install
-          git lfs fetch --all origin
-          git lfs checkout
-
-      - name: Download финальную базу
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           name: estate-db-final
           path: storage/
 
-      - name: Commit & Push (один раз и навсегда)
+      - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
+          git config user.email "github-actions@github.com"
           git add storage/estate.db
-          git commit -m "Daily update: links + bronze (run #${{ github.run_number }})" || echo "No changes to commit"
-
-          git push origin main
-          git lfs push --all origin main
-
-      - name: Upload final logs
-        uses: actions/upload-artifact@v4
-        with:
-          name: logs-final-${{ github.run_number }}
-          path: logs/
+          git commit -m "Daily update: links + bronze (#${{ github.run_number }})" || echo "Nothing to commit"
+          git push
 
   # ==============================================================
   # 4. Silver → Supabase
@@ -254,32 +140,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          lfs: true
-          fetch-depth: 0
-
-      - name: Setup Git LFS + pull
-        run: |
-          git lfs install
-          git lfs fetch --all origin
-          git lfs checkout
-
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - run: pip install -r requirements.txt
-
       - name: Silver → Supabase
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: python -m scripts.run_silver
-
-      - name: Upload silver logs
-        uses: actions/upload-artifact@v4
-        with:
-          name: logs-silver-${{ github.run_number }}
-          path: logs/
 
   # ==============================================================
   # 5. Gold → Supabase
@@ -289,22 +158,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - run: pip install -r requirements.txt
-
       - name: Gold → Supabase
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: python -m scripts.run_gold
-
-      - name: Upload gold logs
-        uses: actions/upload-artifact@v4
-        with:
-          name: logs-gold-${{ github.run_number }}
-          path: logs/
