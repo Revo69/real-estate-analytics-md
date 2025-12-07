@@ -2,7 +2,7 @@ name: Real Estate Pipeline
 
 on:
   schedule:
-    - cron: '0 2 * * *'   # каждый день в 02:00 UTC
+    - cron: '0 2 * * *'   # every day at 02:00 UTC
   workflow_dispatch:
 
 permissions:
@@ -11,12 +11,10 @@ permissions:
 
 jobs:
   # ==============================================================
-  # 1. Сбор ссылок
+  # 1. Links loader → Supabase
   # ==============================================================
   collect-links:
     runs-on: ubuntu-latest
-    outputs:
-      has_changes: ${{ steps.check.outputs.has_changes }}
     steps:
       - uses: actions/checkout@v4
 
@@ -40,45 +38,22 @@ jobs:
           mkdir -p ~/.local/share/undetected_chromedriver
           echo "$MAJOR" > ~/.local/share/undetected_chromedriver/VERSION
 
-      - name: Initialize DB
-        run: python -m scripts.init_db
-
-      - name: Run links loader
+      - name: Run links loader → Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
           python -m pipeline.acquisition.links_loader --start 1 --end 100
           python -m pipeline.acquisition.links_loader --start 101 --end 200
 
-      - name: Upload DB after links
-        uses: actions/upload-artifact@v4
-        with:
-          name: estate-db-after-links
-          path: storage/estate.db
-
-      - name: Check if anything changed
-        id: check
-        run: |
-          git add storage/estate.db 2>/dev/null || true
-          if git diff --staged --quiet; then
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-          else
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-            git reset
-          fi
-
   # ==============================================================
-  # 2. Bronze-парсинг
+  # 2. Bronze-парсинг → Supabase
   # ==============================================================
   parse-bronze:
     needs: collect-links
-    if: needs.collect-links.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: estate-db-after-links
-          path: storage/
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -98,45 +73,19 @@ jobs:
           mkdir -p ~/.local/share/undetected_chromedriver
           echo "$MAJOR" > ~/.local/share/undetected_chromedriver/VERSION
 
-      - name: Run bronze loader
+      - name: Run bronze loader → Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
           python -m pipeline.bronze.loader --start 0 --end 8000
           python -m pipeline.bronze.loader --start 8001 --end 16000
 
-      - name: Upload final DB
-        uses: actions/upload-artifact@v4
-        with:
-          name: estate-db-final
-          path: storage/estate.db
-
   # ==============================================================
-  # 3. Commit & Push только при наличии изменений
-  # ==============================================================
-  commit-and-push:
-    needs: [collect-links, parse-bronze]
-    if: needs.collect-links.outputs.has_changes == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: estate-db-final
-          path: storage/
-
-      - name: Commit and push
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions@github.com"
-          git add storage/estate.db
-          git commit -m "Daily update: links + bronze (#${{ github.run_number }})" || echo "Nothing to commit"
-          git push
-
-  # ==============================================================
-  # 4. Silver → Supabase
+  # 3. Silver → Supabase
   # ==============================================================
   silver:
-    needs: commit-and-push
+    needs: parse-bronze
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -151,7 +100,7 @@ jobs:
         run: python -m scripts.run_silver
 
   # ==============================================================
-  # 5. Gold → Supabase
+  # 4. Gold → Supabase
   # ==============================================================
   gold:
     needs: silver
