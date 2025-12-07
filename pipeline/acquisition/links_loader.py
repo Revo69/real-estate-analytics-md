@@ -1,7 +1,5 @@
 import os
-import time
 import logging
-import sqlite3
 import uuid
 from urllib.parse import urlparse, urlunparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -17,7 +15,6 @@ import argparse
 
 from dotenv import load_dotenv
 from supabase import create_client, Client
-from datetime import datetime
 
 
 # Load environment variables
@@ -48,8 +45,6 @@ BASE_URL = (
 )
 MAX_WORKERS = int(os.getenv("MAX_WORKERS", 1))
 MAX_RETRIES = 3
-DB_PATH = os.path.join("storage", "estate.db")
-
 
 def init_driver():
     options = uc.ChromeOptions()
@@ -146,8 +141,6 @@ def save_links_to_db(links: list[str]):
     after = after_resp.count or 0
 
     logging.info(f"Saved {after - before} new links (total {after})")
-
-
 
 
 def main():
