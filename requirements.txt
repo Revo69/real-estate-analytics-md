@@ -1,7 +1,0 @@
-selenium
-beautifulsoup4
-webdriver-manager
-undetected-chromedriver==3.5.5
-requests
-python-dotenv
-supabase
