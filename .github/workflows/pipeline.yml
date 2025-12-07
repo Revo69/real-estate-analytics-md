@@ -77,9 +77,10 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        run: |
-          python -m pipeline.bronze.loader --start 0 --end 8000
-          python -m pipeline.bronze.loader --start 8001 --end 16000
+        run:
+          python -m pipeline.bronze.loader --start 0 --end 80 |
+          #python -m pipeline.bronze.loader --start 0 --end 8000
+          #python -m pipeline.bronze.loader --start 8001 --end 16000
 
   # ==============================================================
   # 3. Silver → Supabase
