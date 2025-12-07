@@ -29,7 +29,7 @@ logging.basicConfig(
 def save_estate(record: dict):
     """Save a single estate record into the bronze_estate table."""
     try:
-        supabase.table("bronze_estate").insert({
+        supabase.table("bronze_estate").upsert({
             "id": str(uuid.uuid4()),
             "url": record.get("url"),
             "ad_id": record.get("ad_id"),
@@ -42,7 +42,7 @@ def save_estate(record: dict):
             "price_json": record.get("price_json"),
             "main_features_json": record.get("main_features"),
             "additional_features_json": record.get("additional_features"),
-        }).execute()
+        }, on_conflict=["url"]).execute()
         logging.info(f"Saved estate record: {record.get('url')}")
     except Exception as e:
         logging.error(f"Failed to save estate record: {e}")
@@ -55,18 +55,21 @@ def main(start: int, end: int):
 
     try:
         resp = supabase.table("raw_links") \
-            .select("url") \
+            .select("url, attempts") \
             .eq("status", "pending") \
             .range(offset, offset + limit - 1) \
             .execute()
-        urls = [row["url"] for row in resp.data or []]
+        rows = resp.data or []
     except Exception as e:
         logging.error(f"Failed to fetch pending links: {e}")
-        urls = []
+        rows = []
 
-    logging.info(f"Found {len(urls)} pending links in range {start}-{end}")
+    logging.info(f"Found {len(rows)} pending links in range {start}-{end}")
 
-    for url in urls:
+    for row in rows:
+        url = row["url"]
+        current_attempts = row.get("attempts", 0) or 0
+        
         record = parse_features(url)
         save_estate(record)
 
@@ -74,7 +77,7 @@ def main(start: int, end: int):
             supabase.table("raw_links") \
                 .update({
                     "status": record.get("status"),
-                    "attempts": {"increment": 1},
+                    "attempts": current_attempts + 1,
                     "updated_at": datetime.now(timezone.utc).isoformat()
                 }) \
                 .eq("url", url) \
