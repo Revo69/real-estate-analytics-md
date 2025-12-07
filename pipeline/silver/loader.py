@@ -109,7 +109,6 @@ def transform_record(row):
         "publication_date": normalize_date(pub_date),
         "user_login": user_login,
         "deal_type": deal_type,
-        "region_raw": region_raw,
         "description": description,
 
         # geo

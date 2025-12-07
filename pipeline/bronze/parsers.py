@@ -89,40 +89,31 @@ def clean_number(num_str: str) -> int:
 
 def extract_all_prices(soup: BeautifulSoup) -> Dict[str, Optional[int]]:
     result = {"mdl": None, "eur": None, "usd": None}
-
-    # --- 1. Основная цена ---
-    main_span = soup.find("span", class_="styles_footer__main__8seZ7")
-    if main_span:
-        text = main_span.get_text(" ", strip=True)
-
-        if "€" in text:
-            m = re.search(r"([\d\s\u00A0]+)", text)
-            if m:
-                result["eur"] = clean_number(m.group(1))
-        elif "$" in text:
-            m = re.search(r"([\d\s\u00A0]+)", text)
-            if m:
-                result["usd"] = clean_number(m.group(1))
-        elif "MDL" in text:
-            m = re.search(r"([\d\s\u00A0]+)", text)
-            if m:
-                result["mdl"] = clean_number(m.group(1))
-
-    # --- 2. Конвертированные цены ---
-    for li in soup.select("ul.styles_footer__converted__kKoJd li"):
-        text = li.get_text(" ", strip=True)
-
-        m_eur = re.search(r"([\d\s\u00A0]+)\s*€", text)
-        if m_eur:
-            result["eur"] = clean_number(m_eur.group(1))
-
-        m_usd = re.search(r"([\d\s\u00A0]+)\s*\$", text)
-        if m_usd:
-            result["usd"] = clean_number(m_usd.group(1))
-
-        m_mdl = re.search(r"([\d\s\u00A0]+)\s*MDL", text)
-        if m_mdl:
-            result["mdl"] = clean_number(m_mdl.group(1))
+    
+    # Найти все упоминания цен во всём блоке
+    price_container = soup.find("div", class_="styles_footer__2HvVf")
+    if not price_container:
+        return result
+    
+    # Получить весь текст из контейнера
+    full_text = price_container.get_text(" ", strip=True)
+    
+    # Извлечь все цены с валютами
+    # EUR: "86 900 €" или "86 900€"
+    m_eur = re.search(r"([\d\s\u00A0]+)\s*€", full_text)
+    if m_eur:
+        result["eur"] = clean_number(m_eur.group(1))
+    
+    # USD: "95 864 $" или "95 864$"
+    m_usd = re.search(r"([\d\s\u00A0]+)\s*\$", full_text)
+    if m_usd:
+        result["usd"] = clean_number(m_usd.group(1))
+    
+    # MDL: "1 694 950 MDL" или "1694950 MDL"
+    m_mdl = re.search(r"([\d\s\u00A0]+)\s*MDL", full_text)
+    if m_mdl:
+        result["mdl"] = clean_number(m_mdl.group(1))
+    
     return result
 
 

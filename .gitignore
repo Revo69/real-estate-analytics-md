@@ -18,8 +18,3 @@ storage/snapshots/
 
 # VSCode
 .vscode/
-@"
-# Database — только через GitHub Artifacts
-storage/estate.db
-storage/*.db
-"@ | Out-File -Encoding utf8 -Append .gitignore
