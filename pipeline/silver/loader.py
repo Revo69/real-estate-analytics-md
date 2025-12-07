@@ -1,6 +1,5 @@
 import os
 import logging
-import sqlite3
 import json
 import time
 from datetime import datetime
@@ -31,8 +30,6 @@ load_dotenv()
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-
-DB_PATH = os.path.join("storage", "estate.db")
 
 # Logging setup
 LOG_PATH = os.path.join("logs", "silver_loader_supabase.log")
@@ -182,7 +179,6 @@ def transform_record(row):
     return record
 
 
-
 def batch_upload(records, batch_size=100):
     """Upload records to Supabase in batches with logging statistics."""
     success_count = 0
@@ -201,15 +197,23 @@ def batch_upload(records, batch_size=100):
 
     logging.info(f"📊 Upload summary: {success_count} successful, {error_count} failed")
 
+
 def main():
-    with sqlite3.connect(DB_PATH) as conn:
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT id, url, ad_id, status, publication_date, user_login, deal_type, region, description,
-                   price_json, main_features_json, additional_features_json
-            FROM bronze_estate
-        """)
-        rows = cur.fetchall()
+    try:
+        resp = supabase.table("bronze_estate").select(
+            "id, url, ad_id, status, publication_date, user_login, deal_type, region, description, price_json, main_features_json, additional_features_json"
+        ).execute()
+        rows = [
+            (
+                r["id"], r["url"], r.get("ad_id"), r.get("status"), r.get("publication_date"),
+                r.get("user_login"), r.get("deal_type"), r.get("region"), r.get("description"),
+                r.get("price_json"), r.get("main_features_json"), r.get("additional_features_json")
+            )
+            for r in resp.data or []
+        ]
+    except Exception as e:
+        logging.error(f"Failed to fetch bronze_estate: {e}")
+        rows = []
 
     logging.info(f"Found {len(rows)} estates to upload")
 
@@ -217,6 +221,7 @@ def main():
     batch_upload(records, batch_size=100)
 
     logging.info("🎉 Silver layer sync completed")
+
 
 if __name__ == "__main__":
     main()
