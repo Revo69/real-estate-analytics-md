@@ -1,10 +1,16 @@
+from datetime import datetime, timezone
 import os
 import logging
-import sqlite3
 import uuid
 import json
 import argparse
 from .parsers import parse_features
+from supabase import create_client, Client
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
 
 # Logging setup
 LOG_PATH = os.path.join("logs", "bronze_loader.log")
@@ -20,52 +26,43 @@ logging.basicConfig(
     ]
 )
 
-DB_PATH = os.path.join("storage", "estate.db")
-
 def save_estate(record: dict):
     """Save a single estate record into the bronze_estate table."""
-    with sqlite3.connect(DB_PATH) as conn:
-        cur = conn.cursor()
-        try:
-            cur.execute("""
-                INSERT OR REPLACE INTO bronze_estate 
-                (id, url, ad_id, status, publication_date, user_login, deal_type, region, description,
-                 price_json, main_features_json, additional_features_json)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                str(uuid.uuid4()),
-                record.get("url"),
-                record.get("ad_id"),
-                record.get("status"),
-                record.get("publication_date"),
-                record.get("user_login"),
-                record.get("deal_type"),
-                record.get("region"),
-                record.get("description"),
-                json.dumps(record.get("price_json"), ensure_ascii=False),
-                json.dumps(record.get("main_features"), ensure_ascii=False),
-                json.dumps(record.get("additional_features"), ensure_ascii=False)
-            ))
-            conn.commit()
-            logging.info(f"Saved estate record: {record.get('url')}")
-        except sqlite3.OperationalError as e:
-            logging.error(f"Table bronze_estate not found. Did you run init_db? Error: {e}")
+    try:
+        supabase.table("bronze_estate").insert({
+            "id": str(uuid.uuid4()),
+            "url": record.get("url"),
+            "ad_id": record.get("ad_id"),
+            "status": record.get("status"),
+            "publication_date": record.get("publication_date"),
+            "user_login": record.get("user_login"),
+            "deal_type": record.get("deal_type"),
+            "region": record.get("region"),
+            "description": record.get("description"),
+            "price_json": record.get("price_json"),
+            "main_features_json": record.get("main_features"),
+            "additional_features_json": record.get("additional_features"),
+        }).execute()
+        logging.info(f"Saved estate record: {record.get('url')}")
+    except Exception as e:
+        logging.error(f"Failed to save estate record: {e}")
+
 
 def main(start: int, end: int):
-    """
-    Load pending links from raw_links in the given range [start, end],
-    parse them, and save into bronze_estate.
-    """
+    """Load pending links from raw_links in the given range [start, end], parse them, and save into bronze_estate."""
     limit = end - start + 1
     offset = start - 1
 
-    with sqlite3.connect(DB_PATH) as conn:
-        cur = conn.cursor()
-        cur.execute(
-            "SELECT url FROM raw_links WHERE status='pending' LIMIT ? OFFSET ?",
-            (limit, offset)
-        )
-        urls = [row[0] for row in cur.fetchall()]
+    try:
+        resp = supabase.table("raw_links") \
+            .select("url") \
+            .eq("status", "pending") \
+            .range(offset, offset + limit - 1) \
+            .execute()
+        urls = [row["url"] for row in resp.data or []]
+    except Exception as e:
+        logging.error(f"Failed to fetch pending links: {e}")
+        urls = []
 
     logging.info(f"Found {len(urls)} pending links in range {start}-{end}")
 
@@ -73,15 +70,20 @@ def main(start: int, end: int):
         record = parse_features(url)
         save_estate(record)
 
-        with sqlite3.connect(DB_PATH) as conn:
-            cur = conn.cursor()
-            cur.execute("""
-                UPDATE raw_links 
-                SET status=?, attempts=attempts+1, updated_at=CURRENT_TIMESTAMP
-                WHERE url=?
-            """, (record.get("status"), url))
-            conn.commit()
-        logging.info(f"Marked link {url} as {record.get('status')}")
+        try:
+            supabase.table("raw_links") \
+                .update({
+                    "status": record.get("status"),
+                    "attempts": {"increment": 1},
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }) \
+                .eq("url", url) \
+                .execute()
+
+            logging.info(f"Marked link {url} as {record.get('status')}")
+        except Exception as e:
+            logging.error(f"Failed to update link {url}: {e}")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
