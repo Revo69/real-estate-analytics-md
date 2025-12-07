@@ -15,6 +15,18 @@ from selenium.common.exceptions import TimeoutException, WebDriverException
 from bs4 import BeautifulSoup
 import argparse
 
+from dotenv import load_dotenv
+from supabase import create_client, Client
+from datetime import datetime
+
+
+# Load environment variables
+load_dotenv()
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+
 # Logging setup
 LOG_PATH = os.path.join("logs", "links_loader.log")
 os.makedirs("logs", exist_ok=True)
@@ -115,27 +127,27 @@ def fetch_links_from_page(page: int) -> list[str]:
 
 
 def save_links_to_db(links: list[str]):
-    os.makedirs("storage", exist_ok=True)
-    with sqlite3.connect(DB_PATH) as conn:
-        cur = conn.cursor()
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS raw_links (
-                id TEXT PRIMARY KEY,
-                url TEXT NOT NULL UNIQUE,
-                status TEXT DEFAULT 'pending',
-                attempts INTEGER DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP
-            )
-        """)
-        before = cur.execute("SELECT COUNT(*) FROM raw_links").fetchone()[0]
-        cur.executemany(
-            "INSERT OR IGNORE INTO raw_links (id, url) VALUES (?, ?)",
-            [(str(uuid.uuid4()), u) for u in links]
-        )
-        conn.commit()
-        after = cur.execute("SELECT COUNT(*) FROM raw_links").fetchone()[0]
-        logging.info(f"Saved {after - before} new links (total {after})")
+    if not links:
+        logging.info("No links to save")
+        return
+
+    # считаем количество строк до вставки
+    before_resp = supabase.table("raw_links").select("*", count="exact").limit(1).execute()
+    before = before_resp.count or 0
+
+    # готовим данные
+    rows = [{"id": str(uuid.uuid4()), "url": u, "status": "pending", "attempts": 0} for u in links]
+
+    # вставка с игнорированием дубликатов по url
+    supabase.table("raw_links").upsert(rows, on_conflict=["url"]).execute()
+
+    # считаем количество строк после вставки
+    after_resp = supabase.table("raw_links").select("*", count="exact").limit(1).execute()
+    after = after_resp.count or 0
+
+    logging.info(f"Saved {after - before} new links (total {after})")
+
+
 
 
 def main():
