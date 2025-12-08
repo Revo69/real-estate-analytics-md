@@ -395,21 +395,12 @@ def extract_all_prices(soup: BeautifulSoup) -> Dict[str, Optional[int]]:
     
     return result
 
+
 def parse_features(url: str) -> dict:
-    driver = uc.Chrome(headless=True)
-    
     try:
-        driver.get(url)
-        
-        # ✅ Ждём загрузки конвертированных цен (до 5 секунд)
-        try:
-            WebDriverWait(driver, 5).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "ul.styles_footer__converted__kKoJd li"))
-            )
-        except:
-            pass  # Если не загрузились - продолжаем
-        
-        soup = BeautifulSoup(driver.page_source, "html.parser")
+        response = requests.get(url, headers=HEADERS, timeout=10)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, "html.parser")
 
         features = {"url": url, "status": "success"}
 
@@ -437,12 +428,11 @@ def parse_features(url: str) -> dict:
             "additional_features"
         ))
 
-        # 💰 Цены в JSON (теперь со всеми валютами)
+        # 💰 Цены в JSON
         features["price_json"] = extract_all_prices(soup)
 
         return features
 
+    
     except Exception as e:
         return {"url": url, "status": f"error: {e}"}
-    finally:
-        driver.quit()
