@@ -217,7 +217,7 @@ def main():
     logging.info(f"Found {len(rows)} estates to upload")
 
     records = [transform_record(row) for row in rows]
-    batch_upload(records, batch_size=100)
+    batch_upload(records, batch_size=500)
 
     logging.info("🎉 Silver layer sync completed")
 
