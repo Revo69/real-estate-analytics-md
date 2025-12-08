@@ -186,7 +186,7 @@ def batch_upload(records, batch_size=500):
     for i in range(0, len(records), batch_size):
         batch = records[i:i+batch_size]
         try:
-            supabase.table("silver_estate").upsert(batch, on_conflict=["id"]).execute()
+            supabase.table("silver_estate").upsert(batch, on_conflict=["url"]).execute()
             success_count += len(batch)
             logging.info(f"✅ Uploaded batch {i//batch_size+1} ({len(batch)} records)")
         except Exception as e:
