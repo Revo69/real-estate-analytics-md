@@ -1,8 +1,13 @@
 import re
 import requests
+import undetected_chromedriver as uc
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
 from .mappings import MAIN_FEATURES_MAP, ADDITIONAL_FEATURES_MAP
 from typing import Dict, Optional
+from utils.rates import get_current_rates, convert_currency
 
 
 HEADERS = {
@@ -83,45 +88,101 @@ def extract_text(soup, selector, key_name, mapping=None, normalize=True, remove_
 
     return {key_name: text}
 
-def clean_number(num_str: str) -> int:
+def clean_number(num_str: str) -> Optional[int]:
     """Очистить строку числа от пробелов и неразрывных пробелов."""
-    return int(num_str.replace(" ", "").replace("\u00A0", ""))
+    if not num_str:
+        return None
+    try:
+        return int(num_str.replace(" ", "").replace("\u00A0", ""))
+    except (ValueError, AttributeError):
+        return None
 
-def extract_all_prices(soup: BeautifulSoup) -> Dict[str, Optional[int]]:
+def get_converted_prices(main_price: int, main_currency: str) -> Dict[str, Optional[int]]:
+    """Конвертировать основную цену во все валюты используя актуальные курсы."""
     result = {"mdl": None, "eur": None, "usd": None}
     
-    # Найти все упоминания цен во всём блоке
-    price_container = soup.find("div", class_="styles_footer__2HvVf")
-    if not price_container:
+    if not main_price or not main_currency:
         return result
     
-    # Получить весь текст из контейнера
-    full_text = price_container.get_text(" ", strip=True)
+    main_currency = main_currency.lower()
+    result[main_currency] = main_price
     
-    # Извлечь все цены с валютами
-    # EUR: "86 900 €" или "86 900€"
-    m_eur = re.search(r"([\d\s\u00A0]+)\s*€", full_text)
-    if m_eur:
-        result["eur"] = clean_number(m_eur.group(1))
-    
-    # USD: "95 864 $" или "95 864$"
-    m_usd = re.search(r"([\d\s\u00A0]+)\s*\$", full_text)
-    if m_usd:
-        result["usd"] = clean_number(m_usd.group(1))
-    
-    # MDL: "1 694 950 MDL" или "1694950 MDL"
-    m_mdl = re.search(r"([\d\s\u00A0]+)\s*MDL", full_text)
-    if m_mdl:
-        result["mdl"] = clean_number(m_mdl.group(1))
+    # Конвертируем в остальные валюты используя актуальные курсы
+    for currency in ["mdl", "eur", "usd"]:
+        if currency != main_currency:
+            result[currency] = convert_currency(main_price, main_currency, currency)
     
     return result
 
+def extract_all_prices(soup: BeautifulSoup) -> Dict[str, Optional[int]]:
+    """
+    Извлечь цены во всех валютах.
+    Стратегия: парсим что есть в HTML, остальное конвертируем по актуальным курсам.
+    """
+    result = {"mdl": None, "eur": None, "usd": None}
+    
+    price_container = soup.find("div", class_=re.compile(r"styles_footer__"))
+    if not price_container:
+        return result
+    
+    # Получаем весь текст из блока цены
+    full_text = price_container.get_text(separator=" ", strip=True)
+    
+    # Парсим все найденные валюты
+    found_any = False
+    
+    if m := re.search(r"([\d\s\u00A0]+)\s*€", full_text):
+        result["eur"] = clean_number(m.group(1))
+        found_any = True
+    
+    if m := re.search(r"([\d\s\u00A0]+)\s*\$", full_text):
+        result["usd"] = clean_number(m.group(1))
+        found_any = True
+    
+    if m := re.search(r"([\d\s\u00A0]+)\s*MDL", full_text):
+        result["mdl"] = clean_number(m.group(1))
+        found_any = True
+    
+    # Если хоть одна валюта найдена — пересчитываем остальные
+    if found_any:
+        # Определяем основную валюту (не None)
+        main_currency = None
+        main_price = None
+        
+        if result["eur"]:
+            main_currency = "eur"
+            main_price = result["eur"]
+        elif result["usd"]:
+            main_currency = "usd"
+            main_price = result["usd"]
+        elif result["mdl"]:
+            main_currency = "mdl"
+            main_price = result["mdl"]
+        
+        # Конвертируем недостающие валюты
+        if main_currency and main_price:
+            converted = get_converted_prices(main_price, main_currency)
+            for currency in ["mdl", "eur", "usd"]:
+                if result[currency] is None:
+                    result[currency] = converted[currency]
+    
+    return result
 
 def parse_features(url: str) -> dict:
+    driver = uc.Chrome(headless=True)
+    
     try:
-        response = requests.get(url, headers=HEADERS, timeout=10)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, "html.parser")
+        driver.get(url)
+        
+        # ✅ Ждём загрузки конвертированных цен (до 5 секунд)
+        try:
+            WebDriverWait(driver, 5).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "ul.styles_footer__converted__kKoJd li"))
+            )
+        except:
+            pass  # Если не загрузились - продолжаем
+        
+        soup = BeautifulSoup(driver.page_source, "html.parser")
 
         features = {"url": url, "status": "success"}
 
@@ -149,11 +210,12 @@ def parse_features(url: str) -> dict:
             "additional_features"
         ))
 
-        # 💰 Цены в JSON
+        # 💰 Цены в JSON (теперь со всеми валютами)
         features["price_json"] = extract_all_prices(soup)
 
         return features
 
-    
     except Exception as e:
         return {"url": url, "status": f"error: {e}"}
+    finally:
+        driver.quit()
