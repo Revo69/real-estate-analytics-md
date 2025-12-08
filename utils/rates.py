@@ -3,7 +3,7 @@ import logging
 from typing import Dict, Optional
 from datetime import datetime, timedelta
 
-# Кэшируем курсы на 6 часов — не будем долбить API каждый запрос
+# Кэшируем курсы на 6 часов, чтоб не запрашивать API каждый запрос
 _cache: Dict[str, float] = {}
 _last_update: Optional[datetime] = None
 CACHE_TTL = timedelta(hours=6)
