@@ -178,7 +178,7 @@ def transform_record(row):
     return record
 
 
-def batch_upload(records, batch_size=100):
+def batch_upload(records, batch_size=500):
     """Upload records to Supabase in batches with logging statistics."""
     success_count = 0
     error_count = 0
