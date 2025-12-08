@@ -219,3 +219,230 @@ def parse_features(url: str) -> dict:
         return {"url": url, "status": f"error: {e}"}
     finally:
         driver.quit()
+
+
+import re
+import requests
+import undetected_chromedriver as uc
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from bs4 import BeautifulSoup
+from .mappings import MAIN_FEATURES_MAP, ADDITIONAL_FEATURES_MAP
+from typing import Dict, Optional
+from utils.rates import get_current_rates, convert_currency
+
+
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+}
+
+def extract_list_features(soup, block_selector, key_selector, value_selector, key_map, block_name):
+    result = {block_name: {}}
+    unknown_keys = []
+
+    block = soup.select_one(block_selector)
+    if block:
+        for li in block.select("li"):
+            key_tag = li.select_one(key_selector)
+            value_tag = li.select_one(value_selector)
+            if not key_tag or not value_tag:
+                continue
+
+            raw_key = key_tag.get_text(strip=True)
+            raw_value = value_tag.get_text(strip=True)
+
+            clean_key = key_map.get(raw_key)
+            if clean_key:
+                result[block_name][clean_key] = raw_value
+            else:
+                unknown_keys.append(raw_key)
+    else:
+        result[f"{block_name}_status"] = "Нет блока характеристик"
+
+    if unknown_keys:
+        result[f"unknown_{block_name}"] = unknown_keys
+
+    return result
+
+
+def extract_boolean_features(soup, block_selector, item_selector, key_map, block_name):
+    result = {block_name: {}}
+    unknown_keys = []
+
+    block = soup.select_one(block_selector)
+    if block:
+        for item in block.select(item_selector):
+            raw_key = item.get_text(strip=True)
+            mapped_key = key_map.get(raw_key)
+            if mapped_key:
+                result[block_name][mapped_key] = True
+            else:
+                unknown_keys.append(raw_key)
+    else:
+        result[f"{block_name}_status"] = "Нет блока характеристик"
+
+    if unknown_keys:
+        result[f"unknown_{block_name}"] = unknown_keys
+
+    return result
+
+
+def extract_attr(soup, selector, attr_name, key_name):
+    tag = soup.select_one(selector)
+    if not tag:
+        return {key_name: None}
+    return {key_name: tag.get(attr_name)}
+
+
+def extract_text(soup, selector, key_name, mapping=None, normalize=True, remove_prefix=None):
+    tag = soup.select_one(selector)
+    if not tag:
+        return {key_name: None}
+
+    text = tag.get_text(strip=True)
+
+    if remove_prefix and text.startswith(remove_prefix):
+        text = text[len(remove_prefix):]
+
+    if normalize:
+        text = text.strip() or None
+
+    if mapping and text in mapping:
+        text = mapping[text]
+
+    return {key_name: text}
+
+
+def clean_number(num_str: str) -> Optional[int]:
+    """Очистить строку числа от пробелов и неразрывных пробелов."""
+    if not num_str:
+        return None
+    try:
+        return int(num_str.replace(" ", "").replace("\u00A0", ""))
+    except (ValueError, AttributeError):
+        return None
+
+
+def get_converted_prices(main_price: int, main_currency: str) -> Dict[str, Optional[int]]:
+    """Конвертировать основную цену во все валюты используя актуальные курсы."""
+    result = {"mdl": None, "eur": None, "usd": None}
+    
+    if not main_price or not main_currency:
+        return result
+    
+    main_currency = main_currency.lower()
+    result[main_currency] = main_price
+    
+    # Конвертируем в остальные валюты используя актуальные курсы
+    for currency in ["mdl", "eur", "usd"]:
+        if currency != main_currency:
+            result[currency] = convert_currency(main_price, main_currency, currency)
+    
+    return result
+
+def extract_all_prices(soup: BeautifulSoup) -> Dict[str, Optional[int]]:
+    """
+    Извлечь цены во всех валютах.
+    Стратегия: парсим что есть в HTML, остальное конвертируем по актуальным курсам.
+    """
+    result = {"mdl": None, "eur": None, "usd": None}
+    
+    price_container = soup.find("div", class_=re.compile(r"styles_footer__"))
+    if not price_container:
+        return result
+    
+    # Получаем весь текст из блока цены
+    full_text = price_container.get_text(separator=" ", strip=True)
+    
+    # Парсим все найденные валюты
+    found_any = False
+    
+    if m := re.search(r"([\d\s\u00A0]+)\s*€", full_text):
+        result["eur"] = clean_number(m.group(1))
+        found_any = True
+    
+    if m := re.search(r"([\d\s\u00A0]+)\s*\$", full_text):
+        result["usd"] = clean_number(m.group(1))
+        found_any = True
+    
+    if m := re.search(r"([\d\s\u00A0]+)\s*MDL", full_text):
+        result["mdl"] = clean_number(m.group(1))
+        found_any = True
+    
+    # Если хоть одна валюта найдена — пересчитываем остальные
+    if found_any:
+        # Определяем основную валюту (не None)
+        main_currency = None
+        main_price = None
+        
+        if result["eur"]:
+            main_currency = "eur"
+            main_price = result["eur"]
+        elif result["usd"]:
+            main_currency = "usd"
+            main_price = result["usd"]
+        elif result["mdl"]:
+            main_currency = "mdl"
+            main_price = result["mdl"]
+        
+        # Конвертируем недостающие валюты
+        if main_currency and main_price:
+            converted = get_converted_prices(main_price, main_currency)
+            for currency in ["mdl", "eur", "usd"]:
+                if result[currency] is None:
+                    result[currency] = converted[currency]
+    
+    return result
+
+def parse_features(url: str) -> dict:
+    driver = uc.Chrome(headless=True)
+    
+    try:
+        driver.get(url)
+        
+        # ✅ Ждём загрузки конвертированных цен (до 5 секунд)
+        try:
+            WebDriverWait(driver, 5).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "ul.styles_footer__converted__kKoJd li"))
+            )
+        except:
+            pass  # Если не загрузились - продолжаем
+        
+        soup = BeautifulSoup(driver.page_source, "html.parser")
+
+        features = {"url": url, "status": "success"}
+
+        features.update(extract_attr(soup, 'meta[property="product:retailer_item_id"]', "content", "ad_id"))
+        features.update(extract_text(soup, "p.styles_date__voWnk", "publication_date", remove_prefix="Дата публикации:"))
+        features.update(extract_text(soup, "a.styles_owner__login__VKE71", "user_login"))
+        features.update(extract_text(soup, "p.styles_type___J9Dy", "deal_type", remove_prefix="Тип:"))
+        features.update(extract_text(soup, "div.styles_region__7lsaj", "region", remove_prefix="Регион:"))
+        features.update(extract_text(soup, "div.styles_description__8_RRa div.styles_textcontent__XH6FS.styles_desktop__d_kP8", "description"))
+
+        features.update(extract_list_features(
+            soup,
+            "div.styles_features__left__ON_QP",
+            "span.styles_group__key__uRhnQ",
+            "span.styles_group__value__XN7OI",
+            MAIN_FEATURES_MAP,
+            "main_features"
+        ))
+
+        features.update(extract_boolean_features(
+            soup,
+            "div.styles_features__right__Sn6fV",
+            "span.styles_group__key__uRhnQ",
+            ADDITIONAL_FEATURES_MAP,
+            "additional_features"
+        ))
+
+        # 💰 Цены в JSON (теперь со всеми валютами)
+        features["price_json"] = extract_all_prices(soup)
+
+        return features
+
+    except Exception as e:
+        return {"url": url, "status": f"error: {e}"}
+    finally:
+        driver.quit()
