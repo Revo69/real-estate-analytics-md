@@ -182,7 +182,6 @@ def batch_upload(records, batch_size=500):
     """Upload records to Supabase in batches with logging statistics."""
     success_count = 0
     error_count = 0
-
     for i in range(0, len(records), batch_size):
         batch = records[i:i+batch_size]
         try:
@@ -193,32 +192,61 @@ def batch_upload(records, batch_size=500):
             error_count += len(batch)
             logging.error(f"❌ Failed to upload batch {i//batch_size+1}: {e}")
         time.sleep(0.5)  # small delay between batches
-
     logging.info(f"📊 Upload summary: {success_count} successful, {error_count} failed")
 
 
+def fetch_all_records(table_name, columns, page_size=1000):
+    """Fetch all records from Supabase table with pagination (service key bypass RLS)."""
+    all_rows = []
+    offset = 0
+    
+    while True:
+        try:
+            # С service key можно получать данные без ограничений RLS
+            resp = supabase.table(table_name).select(columns).range(offset, offset + page_size - 1).execute()
+            
+            if not resp.data:
+                break
+            
+            batch_size = len(resp.data)
+            all_rows.extend(resp.data)
+            logging.info(f"📥 Fetched {batch_size} records (total: {len(all_rows)})")
+            
+            # Если получили меньше page_size записей, значит это последняя страница
+            if batch_size < page_size:
+                break
+            
+            offset += page_size
+            # С service key можно убрать задержку или сделать минимальной
+            time.sleep(0.1)
+            
+        except Exception as e:
+            logging.error(f"Failed to fetch records at offset {offset}: {e}")
+            break
+    
+    return all_rows
+
+
 def main():
-    try:
-        resp = supabase.table("bronze_estate").select(
-            "id, url, ad_id, status, publication_date, user_login, deal_type, region, description, price_json, main_features_json, additional_features_json"
-        ).execute()
-        rows = [
-            (
-                r["id"], r["url"], r.get("ad_id"), r.get("status"), r.get("publication_date"),
-                r.get("user_login"), r.get("deal_type"), r.get("region"), r.get("description"),
-                r.get("price_json"), r.get("main_features_json"), r.get("additional_features_json")
-            )
-            for r in resp.data or []
-        ]
-    except Exception as e:
-        logging.error(f"Failed to fetch bronze_estate: {e}")
-        rows = []
-
-    logging.info(f"Found {len(rows)} estates to upload")
-
+    columns = "id, url, ad_id, status, publication_date, user_login, deal_type, region, description, price_json, main_features_json, additional_features_json"
+    
+    # Используем пагинацию для получения всех записей
+    raw_data = fetch_all_records("bronze_estate", columns, page_size=1000)
+    
+    rows = [
+        (
+            r["id"], r["url"], r.get("ad_id"), r.get("status"), r.get("publication_date"),
+            r.get("user_login"), r.get("deal_type"), r.get("region"), r.get("description"),
+            r.get("price_json"), r.get("main_features_json"), r.get("additional_features_json")
+        )
+        for r in raw_data
+    ]
+    
+    logging.info(f"Found {len(rows)} estates to process")
+    
     records = [transform_record(row) for row in rows]
     batch_upload(records, batch_size=500)
-
+    
     logging.info("🎉 Silver layer sync completed")
 
 
