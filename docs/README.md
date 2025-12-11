@@ -10,21 +10,21 @@ A modular data pipeline for collecting, transforming, and analyzing real estate 
 %% Real Estate Analytics — Architecture Overview
 graph TD
     subgraph "Acquisition"
-        A[Links Collector<br/>Scraper] --> B[Raw Links <br/>SQLite]
+        A[Links Collector<br/>Scraper] --> B[Raw Links <br/>Supabase Postgres]
     end
 
     subgraph "Bronze Layer"
         B --> C[Bronze Loader]
-        C --> D[bronze_estate<br/>Raw structured data<br/>SQLite estate.db]
+        C --> D[bronze_estate<br/>Raw structured data<br/>Supabase Postgres]
     end
 
     subgraph "Silver Layer"
         D --> E[Silver Transformer + Loader<br/>silver/transformers.py<br/>silver/loader.py]
-        E --> F[silver_estate<br/>Clean & normalized data<br/>Supabase PostgreSQL]
+        E --> F[silver_estate<br/>Clean & normalized data<br/>Supabase Postgres]
     end
 
-    subgraph "Gold Layer — Planned"
-        F --> G[Aggregations & Business Metrics<br/>Price trends<br/>Stats by region<br/>Anomaly detection]
+    subgraph "Gold Layer"
+        F --> G[Aggregations & Business Metrics<br/>Price trends<br/>Stats by region]
     end
 
     subgraph "Analytics & Consumption"
@@ -50,8 +50,8 @@ graph TD
 
 | Layer   | Purpose                                                                 | Storage                  |
 |---------|-------------------------------------------------------------------------|--------------------------|
-| Raw     | Deduplicated queue of listing URLs for acquisition                      | `raw_links` (SQLite)|
-| Bronze  | Parsed listings with structured fields + embedded JSON (prices, features)| `bronze_estate` (SQLite) |
+| Raw     | Deduplicated queue of listing URLs for acquisition                      | `raw_links` (Supabase/Postgres)|
+| Bronze  | Parsed listings with structured fields + embedded JSON (prices, features)| `bronze_estate` (Supabase/Postgres) |
 | Silver  | Normalized records for analytics and dashboards                         | `silver_estate` (Supabase/Postgres) |
 | Gold    | Aggregated, analytics‑ready datasets (KPIs, trends, predictive models)  | `gold_estate_current` (Supabase/Postgres) |
 
@@ -121,7 +121,6 @@ This design ensures:
 ## ⚙️ Technologies
 
 - **Python 3.11** — core language for ETL scripts and orchestration  
-- **SQLite** — lightweight local database for Bronze layer storage  
 - **Supabase** — managed Postgres backend for Silver layer persistence and analytics  
 - **GitHub Actions** — CI/CD automation for scheduled and reproducible pipeline runs  
 - **Modular ETL architecture** — clear separation of Bronze (parsed listings), Silver (normalized data), and Gold (analytics-ready datasets)  
@@ -157,8 +156,7 @@ Or let **GitHub Actions** orchestrate it automatically via
 
 ## 📁 Data Storage
 
-- `storage/estate.db` — local **SQLite** database containing Bronze and Silver layers  
-- `raw_links` — deduplicated queue of listing URLs for acquisition  
+- `raw_links` — deduplicated queue of listing URLs for acquisition stored in **Supabase/Postgres** 
 - `bronze_estate` — parsed listings table with structured fields and embedded JSON (prices, features)  
 - `silver_estate` — normalized records stored in **Supabase/Postgres** for downstream analytics
 - `gold_estate_current` — curated, aggregated, and cleaned records stored in **Supabase/Postgres** representing the latest state of the real estate market.  
