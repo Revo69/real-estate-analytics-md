@@ -80,15 +80,15 @@ jobs:
           python -m pipeline.bronze.loader --start 0 --end 1000
           python -m pipeline.bronze.loader --start 1001 --end 2000
           python -m pipeline.bronze.loader --start 2001 --end 3000
-          python -m pipeline.bronze.loader --start 3001 --end 4000
-          python -m pipeline.bronze.loader --start 4001 --end 5000
-          python -m pipeline.bronze.loader --start 5001 --end 6000
-          python -m pipeline.bronze.loader --start 6001 --end 7000
-          python -m pipeline.bronze.loader --start 7001 --end 8000
-          python -m pipeline.bronze.loader --start 8001 --end 9000
-         # python -m pipeline.bronze.loader --start 9001 --end 10000
-         # python -m pipeline.bronze.loader --start 10001 --end 11000
-         # python -m pipeline.bronze.loader --start 11001 --end 12000
+          #python -m pipeline.bronze.loader --start 3001 --end 4000
+          #python -m pipeline.bronze.loader --start 4001 --end 5000
+          #python -m pipeline.bronze.loader --start 5001 --end 6000
+          #python -m pipeline.bronze.loader --start 6001 --end 7000
+          #python -m pipeline.bronze.loader --start 7001 --end 8000
+          #python -m pipeline.bronze.loader --start 8001 --end 9000
+          #python -m pipeline.bronze.loader --start 9001 --end 10000
+          #python -m pipeline.bronze.loader --start 10001 --end 11000
+          #python -m pipeline.bronze.loader --start 11001 --end 12000
           #python -m pipeline.bronze.loader --start 12001 --end 13000
           #python -m pipeline.bronze.loader --start 13001 --end 14000
           #python -m pipeline.bronze.loader --start 14001 --end 15000
