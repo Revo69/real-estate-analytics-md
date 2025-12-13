@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 from .parsers import parse_features
 from supabase import create_client, Client
 from selenium.webdriver.chrome.options import Options
+import undetected_chromedriver as uc
+import time
 
 # Load environment variables
 load_dotenv()
@@ -217,6 +219,8 @@ def main(start: int, end: int):
             if idx % 10 == 0:
                 logging.info(f"📊 Progress: {idx}/{len(rows)} | ✅ {success_count} | ❌ {failed_count}")
 
+            time.sleep(1)
+            
     finally:
         # ============================================
         # 🔚 close driver in the end
