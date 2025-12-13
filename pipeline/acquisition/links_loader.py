@@ -134,7 +134,7 @@ def save_links_to_db(links: list[str]):
     rows = [{"id": str(uuid.uuid4()), "url": u, "status": "pending", "attempts": 0} for u in links]
 
     # вставка с игнорированием дубликатов по url
-    supabase.table("raw_links").upsert(rows, on_conflict=["url"]).execute()
+    supabase.table("raw_links").insert(rows, ignore_duplicates=True).execute()
 
     # считаем количество строк после вставки
     after_resp = supabase.table("raw_links").select("*", count="exact").limit(1).execute()
