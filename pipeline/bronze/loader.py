@@ -2,19 +2,18 @@ from datetime import datetime, timezone
 import os
 import logging
 import uuid
-import json
 import argparse
 from dotenv import load_dotenv
 from .parsers import parse_features
 from supabase import create_client, Client
+from selenium.webdriver.chrome.options import Options
 
-# ВАЖНО: Загрузить .env файл ДО использования переменных окружения
+# Load environment variables
 load_dotenv()
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
-# Проверка, что переменные загружены
 if not SUPABASE_URL or not SUPABASE_KEY:
     raise ValueError(
         "SUPABASE_URL and SUPABASE_KEY must be set in .env file!\n"
@@ -140,62 +139,95 @@ def main(start: int, end: int):
 
     logging.info(f"✅ Found {len(rows)} pending links in range {start}-{end}")
 
+    # ============================================
+    # 🚀 Create driver for full batch
+    # ============================================
+    logging.info("🚀 Initializing Chrome driver...")
+    
+    options = Options()
+    options.add_argument('--headless')
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
+    options.add_argument('--disable-gpu')
+    options.add_argument('--disable-blink-features=AutomationControlled')
+    
+    driver = None
+    try:
+        driver = uc.Chrome(options=options)
+        logging.info("✅ Driver initialized successfully")
+    except Exception as e:
+        logging.error(f"❌ Failed to initialize driver: {e}")
+        logging.error("Cannot proceed without driver. Exiting.")
+        return
+
     success_count = 0
     failed_count = 0
-    skipped_count = 0
 
-    for idx, row in enumerate(rows, 1):
-        url = row["url"].strip()  # Убираем пробелы
-        current_attempts = row.get("attempts", 0) or 0
-        
-        logging.info(f"\n{'='*60}")
-        logging.info(f"🔄 [{idx}/{len(rows)}] Processing: {url}")
-        logging.info(f"   Current attempts: {current_attempts}")
-        
-        # Parse the URL
-        try:
-            record = parse_features(url)
-            logging.info(f"   ✅ Parsing completed")
-        except Exception as e:
-            logging.error(f"   ❌ Parsing failed: {e}")
-            record = {"status": "failed", "url": url}
-        
-        # Determine the actual status based on parsing result
-        parse_status = record.get("status", "failed")
-        logging.info(f"   Parse status: {parse_status}")
-        
-        # Only save if parsing was successful
-        if parse_status == "success":
-            logging.info(f"   💾 Attempting to save to bronze_estate...")
-            saved = save_estate(record)
-            logging.info(f"   Save result: {'✅ Success' if saved else '❌ Failed'}")
+    try:
+        for idx, row in enumerate(rows, 1):
+            url = row["url"].strip()  # del spaces
+            current_attempts = row.get("attempts", 0) or 0
             
-            if saved:
-                # Update link status to 'processed' or 'success'
-                logging.info(f"   🔄 Updating link status to 'processed'...")
-                updated = update_link_status(url, "processed", current_attempts)
-                if updated:
-                    success_count += 1
-                    logging.info(f"   ✅ Link status updated successfully")
+            logging.info(f"\n{'='*60}")
+            logging.info(f"🔄 [{idx}/{len(rows)}] Processing: {url}")
+            logging.info(f"   Current attempts: {current_attempts}")
+            
+            # Parse the URL
+            try:
+                record = parse_features(url, driver=driver)
+                logging.info(f"   ✅ Parsing completed")
+            except Exception as e:
+                logging.error(f"   ❌ Parsing failed: {e}")
+                record = {"status": "failed", "url": url}
+            
+            # Determine the actual status based on parsing result
+            parse_status = record.get("status", "failed")
+            logging.info(f"   Parse status: {parse_status}")
+            
+            # Only save if parsing was successful
+            if parse_status == "success":
+                logging.info(f"   💾 Attempting to save to bronze_estate...")
+                saved = save_estate(record)
+                logging.info(f"   Save result: {'✅ Success' if saved else '❌ Failed'}")
+                
+                if saved:
+                    # Update link status to 'processed' or 'success'
+                    logging.info(f"   🔄 Updating link status to 'processed'...")
+                    updated = update_link_status(url, "processed", current_attempts)
+                    if updated:
+                        success_count += 1
+                        logging.info(f"   ✅ Link status updated successfully")
+                    else:
+                        logging.error(f"   ❌ Failed to update link status")
+                        failed_count += 1
                 else:
-                    logging.error(f"   ❌ Failed to update link status")
+                    # Parsing succeeded but saving failed
+                    logging.info(f"   ⚠️ Parsing OK but saving failed, marking as 'save_failed'")
+                    update_link_status(url, "save_failed", current_attempts)
                     failed_count += 1
             else:
-                # Parsing succeeded but saving failed
-                logging.info(f"   ⚠️ Parsing OK but saving failed, marking as 'save_failed'")
-                update_link_status(url, "save_failed", current_attempts)
+                # Parsing failed
+                logging.info(f"   ⚠️ Parsing failed, marking as 'parse_failed'")
+                update_link_status(url, "parse_failed", current_attempts)
                 failed_count += 1
-        else:
-            # Parsing failed
-            logging.info(f"   ⚠️ Parsing failed, marking as 'parse_failed'")
-            update_link_status(url, "parse_failed", current_attempts)
-            failed_count += 1
-        
-        logging.info(f"{'='*60}\n")
-        
-        # Progress indicator every 10 records
-        if idx % 10 == 0:
-            logging.info(f"📊 Progress: {idx}/{len(rows)} | ✅ {success_count} | ❌ {failed_count}")
+            
+            logging.info(f"{'='*60}\n")
+            
+            # Progress indicator every 10 records
+            if idx % 10 == 0:
+                logging.info(f"📊 Progress: {idx}/{len(rows)} | ✅ {success_count} | ❌ {failed_count}")
+
+    finally:
+        # ============================================
+        # 🔚 close driver in the end
+        # ============================================
+        if driver:
+            logging.info("🔚 Closing Chrome driver...")
+            try:
+                driver.quit()
+                logging.info("✅ Driver closed successfully")
+            except Exception as e:
+                logging.error(f"⚠️ Error closing driver: {e}")
 
     logging.info(f"🎉 Processing complete!")
     logging.info(f"📊 Summary: ✅ {success_count} successful | ❌ {failed_count} failed | Total: {len(rows)}")

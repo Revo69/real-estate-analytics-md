@@ -168,8 +168,7 @@ def extract_all_prices(soup: BeautifulSoup) -> Dict[str, Optional[int]]:
     
     return result
 
-def parse_features(url: str) -> dict:
-    driver = uc.Chrome(headless=True)
+def parse_features(url: str, driver=None) -> dict:
     
     try:
         driver.get(url)
@@ -208,5 +207,4 @@ def parse_features(url: str) -> dict:
 
     except Exception as e:
         return {"url": url, "status": f"error: {e}"}
-    finally:
-        driver.quit()
+
