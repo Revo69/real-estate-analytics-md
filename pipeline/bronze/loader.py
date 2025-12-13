@@ -219,7 +219,7 @@ def main(start: int, end: int):
             if idx % 10 == 0:
                 logging.info(f"📊 Progress: {idx}/{len(rows)} | ✅ {success_count} | ❌ {failed_count}")
 
-            time.sleep(1)
+            #time.sleep(1)
             
     finally:
         # ============================================
