@@ -9,7 +9,7 @@ import os
 from pipeline.gold import loader as gold_loader
 
 def main():
-    # гарантируем наличие директории logs/
+    # ensure logs/ directory exists
     os.makedirs("logs", exist_ok=True)
 
     logging.basicConfig(

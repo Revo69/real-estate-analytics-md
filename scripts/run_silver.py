@@ -9,7 +9,7 @@ from pipeline.silver import loader as silver_loader
 import os
 
 def main():
-    # гарантируем наличие директории logs/
+    # ensure logs/ directory exists
     os.makedirs("logs", exist_ok=True)
 
     logging.basicConfig(

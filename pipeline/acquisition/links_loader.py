@@ -56,7 +56,7 @@ def init_driver():
     options.add_argument("--window-size=1920,1080")
     options.add_argument("--lang=ru-RU")
 
-    # динамический user-agent
+    # dynamic user-agent
     from shutil import which
     import subprocess
     chrome_path = which("google-chrome") or "/usr/bin/google-chrome"
@@ -126,17 +126,17 @@ def save_links_to_db(links: list[str]):
         logging.info("No links to save")
         return
 
-    # считаем количество строк до вставки
+    # count rows before insert
     before_resp = supabase.table("raw_links").select("*", count="exact").limit(1).execute()
     before = before_resp.count or 0
 
-    # готовим данные
+    # prepare data
     rows = [{"id": str(uuid.uuid4()), "url": u, "status": "pending", "attempts": 0} for u in links]
 
-    # вставка с игнорированием дубликатов по url
+    # insert ignoring duplicates by url
     supabase.table("raw_links").insert(rows, ignore_duplicates=True).execute()
 
-    # считаем количество строк после вставки
+    # count rows after insert
     after_resp = supabase.table("raw_links").select("*", count="exact").limit(1).execute()
     after = after_resp.count or 0
 

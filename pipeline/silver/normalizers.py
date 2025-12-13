@@ -29,9 +29,9 @@ def normalize_area(value: str):
     """'22 м²' → 22.0"""
     if not value:
         return None
-    # заменяем запятую на точку и убираем лишние пробелы
+    # replace comma with dot and strip extra spaces
     val = str(value).replace(",", ".").strip()
-    # ищем число (целое или с точкой)
+    # search for a number (integer or with decimal point)
     match = re.search(r"\d+(\.\d+)?", val)
     if match:
         try:

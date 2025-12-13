@@ -3,12 +3,12 @@ import logging
 from typing import Dict, Optional
 from datetime import datetime, timedelta
 
-# Кэшируем курсы на 6 часов, чтоб не запрашивать API каждый запрос
+# Cache rates for 6 hours to avoid hitting the API on every request
 _cache: Dict[str, float] = {}
 _last_update: Optional[datetime] = None
 CACHE_TTL = timedelta(hours=6)
 
-# Запасные курсы (обновлены 08.12.2025)
+# Fallback rates (updated 08.12.2025)
 FALLBACK_RATES = {
     "eur_to_mdl": 19.8153,
     "eur_to_usd": 1.16,
@@ -22,12 +22,12 @@ def get_current_rates() -> Dict[str, float]:
 
     global _cache, _last_update
     
-    # Если кэш свежий — отдаём его
+    # If cache is fresh, return it
     if _last_update and datetime.now() - _last_update < CACHE_TTL and _cache:
         return _cache
     
     try:
-        # Бесплатное API (не требует ключ до 1500 запросов/мес)
+        # Free API (no key required up to 1500 requests/month)
         resp = requests.get("https://api.exchangerate-api.com/v4/latest/EUR", timeout=10)
         resp.raise_for_status()
         data = resp.json()
@@ -35,7 +35,7 @@ def get_current_rates() -> Dict[str, float]:
         eur_to_mdl = data["rates"]["MDL"]
         eur_to_usd = data["rates"]["USD"]
         
-        # Рассчитываем все необходимые курсы
+        # Calculate all needed rates
         rates = {
             "eur_to_mdl": round(eur_to_mdl, 4),
             "eur_to_usd": round(eur_to_usd, 4),
@@ -45,7 +45,7 @@ def get_current_rates() -> Dict[str, float]:
             "usd_to_mdl": round(eur_to_mdl / eur_to_usd, 4),
         }
         
-        # Обновляем кэш
+        # Update cache
         _cache = rates
         _last_update = datetime.now()
         
@@ -55,12 +55,12 @@ def get_current_rates() -> Dict[str, float]:
     except Exception as e:
         logging.warning(f"⚠️ Не удалось получить курсы валют: {e}. Используем запасные курсы.")
         
-        # Если кэш есть, но устарел — всё равно используем его
+        # If cache exists but is stale, still use it
         if _cache:
             logging.info("Используем устаревший кэш")
             return _cache
         
-        # В крайнем случае возвращаем fallback
+        # As a last resort, return the fallback rates
         return FALLBACK_RATES
 
 def convert_currency(amount: int, from_curr: str, to_curr: str) -> int:

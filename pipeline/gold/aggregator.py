@@ -1,6 +1,6 @@
 """
 Business logic for Gold layer aggregation.
-Обновляет все Gold-таблицы: продажи + аренда (помесячно/посуточно)
+Updates all Gold tables: sales + rent (monthly/daily)
 """
 import os
 import logging
@@ -13,7 +13,7 @@ def get_client():
     return create_client(url, key)
 
 def refresh_gold_estate():
-    """Обновляет Gold по продажам"""
+    """Refresh Gold for sales"""
     client = get_client()
     logging.info("Calling Supabase RPC: refresh_gold_estate")
     resp = client.rpc("refresh_gold_estate").execute()
@@ -21,7 +21,7 @@ def refresh_gold_estate():
     return resp
 
 def refresh_gold_rent():
-    """Обновляет Gold по аренде"""
+    """Refresh Gold for rent"""
     client = get_client()
     logging.info("Calling Supabase RPC: refresh_gold_rent")
     resp = client.rpc("refresh_gold_rent").execute()
@@ -30,8 +30,8 @@ def refresh_gold_rent():
 
 def refresh() -> Dict[str, Any]:
     """
-    Главная функция — обновляет Gold одним вызовом.
-    Используется в run_gold.py
+    Main function — refreshes Gold in a single call.
+    Used in run_gold.py
     """
     results = {}
 
@@ -50,7 +50,7 @@ def refresh() -> Dict[str, Any]:
     logging.info("All Gold layers refreshed successfully")
     return results
 
-# Для локального теста: python -m pipeline.gold.aggregator
+# For local testing: python -m pipeline.gold.aggregator
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     refresh()

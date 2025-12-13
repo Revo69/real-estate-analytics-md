@@ -80,15 +80,15 @@ def update_link_status(url: str, status: str, current_attempts: int) -> bool:
     try:
         logging.info(f"🔄 Attempting to update: {url}")
         
-        # Сначала проверяем, что запись существует
+# First, check that the record exists
         check = supabase.table("raw_links").select("id, url, status, attempts").eq("url", url).execute()
         logging.info(f"   Found in DB: {len(check.data) if check.data else 0} records")
-        
+
         if not check.data or len(check.data) == 0:
             logging.error(f"❌ URL not found in raw_links: {url}")
             return False
         
-        # Выполняем обновление (убираем updated_at, если есть триггер в БД)
+        # Perform update (remove updated_at if DB has a trigger)
         result = supabase.table("raw_links").update({
             "status": status,
             "attempts": current_attempts + 1
@@ -96,7 +96,7 @@ def update_link_status(url: str, status: str, current_attempts: int) -> bool:
         
         logging.info(f"   Update executed, checking result...")
         
-        # Проверяем результат
+        # Check result
         if result.data and len(result.data) > 0:
             logging.info(f"✅ Updated {len(result.data)} record(s): {url} → status: {status}, attempts: {current_attempts + 1}")
             return True
@@ -104,7 +104,7 @@ def update_link_status(url: str, status: str, current_attempts: int) -> bool:
             logging.error(f"❌ Update returned no data for URL: {url}")
             logging.error(f"   Response: {result}")
             
-            # Проверяем снова после обновления
+            # Verify again after update
             verify = supabase.table("raw_links").select("status, attempts, updated_at").eq("url", url).execute()
             logging.error(f"   Current record state: {verify.data}")
             return False

@@ -50,7 +50,7 @@ def parse_publication_date(raw_date: str):
     if not raw_date:
         return None
     try:
-        #raw_date = raw_date.replace("Дата обновления:", "").strip()
+        # raw_date = raw_date.replace("Date updated:", "").strip()
 
         for prefix in ("Дата обновления:", "Дата публикации:"):
             if raw_date.startswith(prefix):
@@ -202,7 +202,7 @@ def fetch_all_records(table_name, columns, page_size=1000):
     
     while True:
         try:
-            # С service key можно получать данные без ограничений RLS
+            # With service key, data can be retrieved without RLS restrictions
             resp = supabase.table(table_name).select(columns).range(offset, offset + page_size - 1).execute()
             
             if not resp.data:
@@ -212,12 +212,12 @@ def fetch_all_records(table_name, columns, page_size=1000):
             all_rows.extend(resp.data)
             logging.info(f"📥 Fetched {batch_size} records (total: {len(all_rows)})")
             
-            # Если получили меньше page_size записей, значит это последняя страница
+            # If we received fewer than page_size records, it's the last page
             if batch_size < page_size:
                 break
             
             offset += page_size
-            # С service key можно убрать задержку или сделать минимальной
+            # With service key, we can remove or minimize delay
             time.sleep(0.1)
             
         except Exception as e:
@@ -230,7 +230,7 @@ def fetch_all_records(table_name, columns, page_size=1000):
 def main():
     columns = "id, url, ad_id, status, publication_date, user_login, deal_type, region, description, price_json, main_features_json, additional_features_json"
     
-    # Используем пагинацию для получения всех записей
+    # Use pagination to fetch all records
     raw_data = fetch_all_records("bronze_estate", columns, page_size=1000)
     
     rows = [
