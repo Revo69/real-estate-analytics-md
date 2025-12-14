@@ -125,21 +125,28 @@ def save_links_to_db(links: list[str]):
     if not links:
         logging.info("No links to save")
         return
-
+    
     # count rows before insert
     before_resp = supabase.table("raw_links").select("*", count="exact").limit(1).execute()
     before = before_resp.count or 0
-
-    # prepare data
+    
+    # prepare data rows
     rows = [{"id": str(uuid.uuid4()), "url": u, "status": "pending", "attempts": 0} for u in links]
-
-    # insert ignoring duplicates by url
-    supabase.table("raw_links").insert(rows, ignore_duplicates=True).execute()
-
+    
+    # insert and let unique constraint handle duplicates
+    try:
+        supabase.table("raw_links").insert(rows).execute()
+    except Exception as e:
+        # ignore duplicate key errors, re-raise others
+        error_msg = str(e).lower()
+        if not any(keyword in error_msg for keyword in ["duplicate", "unique", "constraint"]):
+            raise
+        logging.debug(f"Some duplicate URLs skipped: {e}")
+    
     # count rows after insert
     after_resp = supabase.table("raw_links").select("*", count="exact").limit(1).execute()
     after = after_resp.count or 0
-
+    
     logging.info(f"Saved {after - before} new links (total {after})")
 
 
