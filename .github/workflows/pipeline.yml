@@ -86,15 +86,15 @@ jobs:
           python -m pipeline.bronze.loader --start 5001 --end 6000
           python -m pipeline.bronze.loader --start 6001 --end 7000
           python -m pipeline.bronze.loader --start 7001 --end 8000
-          python -m pipeline.bronze.loader --start 8001 --end 9000
-          python -m pipeline.bronze.loader --start 9001 --end 10000
-          python -m pipeline.bronze.loader --start 10001 --end 11000
-          python -m pipeline.bronze.loader --start 11001 --end 12000
-          python -m pipeline.bronze.loader --start 12001 --end 13000
-          python -m pipeline.bronze.loader --start 13001 --end 14000
-          python -m pipeline.bronze.loader --start 14001 --end 15000
-          python -m pipeline.bronze.loader --start 15001 --end 16000
-          python -m pipeline.bronze.loader --start 16001 --end 17000
+          #python -m pipeline.bronze.loader --start 8001 --end 9000
+          #python -m pipeline.bronze.loader --start 9001 --end 10000
+          #python -m pipeline.bronze.loader --start 10001 --end 11000
+          #python -m pipeline.bronze.loader --start 11001 --end 12000
+          #python -m pipeline.bronze.loader --start 12001 --end 13000
+          #python -m pipeline.bronze.loader --start 13001 --end 14000
+          #python -m pipeline.bronze.loader --start 14001 --end 15000
+          #python -m pipeline.bronze.loader --start 15001 --end 16000
+          #python -m pipeline.bronze.loader --start 16001 --end 17000
   # ==============================================================
   # 3. Silver → Supabase
   # ==============================================================
