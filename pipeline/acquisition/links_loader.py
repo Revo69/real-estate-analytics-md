@@ -126,17 +126,24 @@ def save_links_to_db(links: list[str]):
         logging.info("No links to save")
         return
     
-    # Count before
     before_resp = supabase.table("raw_links").select("*", count="exact").limit(1).execute()
     before = before_resp.count or 0
     
-    # Check which URLs already exist (one query for the entire batch)
-    existing_check = supabase.table("raw_links")\
-        .select("url")\
-        .in_("url", list(links))\
-        .execute()
+    # Check existing URLs in batches to avoid URL length limit
+    existing_urls = set()
+    CHECK_BATCH_SIZE = 500  # safe batch size for .in_() queries
     
-    existing_urls = {row['url'] for row in existing_check.data}
+    for i in range(0, len(links), CHECK_BATCH_SIZE):
+        batch = links[i:i + CHECK_BATCH_SIZE]
+        try:
+            existing_check = supabase.table("raw_links")\
+                .select("url")\
+                .in_("url", batch)\
+                .execute()
+            existing_urls.update(row['url'] for row in existing_check.data)
+        except Exception as e:
+            logging.error(f"Error checking existing URLs (batch {i}-{i+len(batch)}): {e}")
+            raise
     
     # Filter out duplicates
     new_links = [u for u in links if u not in existing_urls]
@@ -145,17 +152,24 @@ def save_links_to_db(links: list[str]):
         logging.info(f"No new links to save (all {len(links)} are duplicates, total {before})")
         return
     
-    # Prepare rows for new links only
-    rows = [{"id": str(uuid.uuid4()), "url": u, "status": "pending", "attempts": 0} for u in new_links]
+    # Insert in batches to avoid insert size limits
+    INSERT_BATCH_SIZE = 1000
+    inserted_count = 0
     
-    # Insert new records (guaranteed no conflicts)
-    try:
-        supabase.table("raw_links").insert(rows).execute()
-        after = before + len(new_links)
-        logging.info(f"Saved {len(new_links)} new links (skipped {len(links) - len(new_links)} duplicates, total {after})")
-    except Exception as e:
-        logging.error(f"Error inserting links: {e}")
-        raise
+    for i in range(0, len(new_links), INSERT_BATCH_SIZE):
+        batch = new_links[i:i + INSERT_BATCH_SIZE]
+        rows = [{"id": str(uuid.uuid4()), "url": u, "status": "pending", "attempts": 0} for u in batch]
+        
+        try:
+            supabase.table("raw_links").insert(rows).execute()
+            inserted_count += len(batch)
+            logging.info(f"Inserted batch {i//INSERT_BATCH_SIZE + 1}: {len(batch)} links")
+        except Exception as e:
+            logging.error(f"Error inserting batch {i}-{i+len(batch)}: {e}")
+            raise
+    
+    after = before + inserted_count
+    logging.info(f"Saved {inserted_count} new links (skipped {len(links) - inserted_count} duplicates, total {after})")
 
 
 def main():
