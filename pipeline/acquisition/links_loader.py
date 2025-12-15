@@ -126,28 +126,36 @@ def save_links_to_db(links: list[str]):
         logging.info("No links to save")
         return
     
-    # count rows before insert
+    # Count before
     before_resp = supabase.table("raw_links").select("*", count="exact").limit(1).execute()
     before = before_resp.count or 0
     
-    # prepare data rows
-    rows = [{"id": str(uuid.uuid4()), "url": u, "status": "pending", "attempts": 0} for u in links]
+    # Check which URLs already exist (one query for the entire batch)
+    existing_check = supabase.table("raw_links")\
+        .select("url")\
+        .in_("url", list(links))\
+        .execute()
     
-    # insert and let unique constraint handle duplicates
+    existing_urls = {row['url'] for row in existing_check.data}
+    
+    # Filter out duplicates
+    new_links = [u for u in links if u not in existing_urls]
+    
+    if not new_links:
+        logging.info(f"No new links to save (all {len(links)} are duplicates, total {before})")
+        return
+    
+    # Prepare rows for new links only
+    rows = [{"id": str(uuid.uuid4()), "url": u, "status": "pending", "attempts": 0} for u in new_links]
+    
+    # Insert new records (guaranteed no conflicts)
     try:
         supabase.table("raw_links").insert(rows).execute()
+        after = before + len(new_links)
+        logging.info(f"Saved {len(new_links)} new links (skipped {len(links) - len(new_links)} duplicates, total {after})")
     except Exception as e:
-        # ignore duplicate key errors, re-raise others
-        error_msg = str(e).lower()
-        if not any(keyword in error_msg for keyword in ["duplicate", "unique", "constraint"]):
-            raise
-        logging.debug(f"Some duplicate URLs skipped: {e}")
-    
-    # count rows after insert
-    after_resp = supabase.table("raw_links").select("*", count="exact").limit(1).execute()
-    after = after_resp.count or 0
-    
-    logging.info(f"Saved {after - before} new links (total {after})")
+        logging.error(f"Error inserting links: {e}")
+        raise
 
 
 def main():
