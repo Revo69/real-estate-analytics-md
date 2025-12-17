@@ -7,8 +7,10 @@ from dotenv import load_dotenv
 from .parsers import parse_features
 from supabase import create_client, Client
 from selenium.webdriver.chrome.options import Options
+from selenium.common.exceptions import TimeoutException, WebDriverException
 import undetected_chromedriver as uc
 import time
+import random
 
 # Load environment variables
 load_dotenv()
@@ -23,7 +25,6 @@ if not SUPABASE_URL or not SUPABASE_KEY:
     )
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-
 
 # Logging setup
 LOG_PATH = os.path.join("logs", "bronze_loader.log")
@@ -71,7 +72,6 @@ def save_estate(record: dict) -> bool:
         logging.error(f"❌ Failed to save estate record {record.get('url')}: {e}")
         return False
 
-
 def update_link_status(url: str, status: str, current_attempts: int) -> bool:
     """
     Update the status and attempts count for a link in raw_links.
@@ -80,15 +80,15 @@ def update_link_status(url: str, status: str, current_attempts: int) -> bool:
     try:
         logging.info(f"🔄 Attempting to update: {url}")
         
-# First, check that the record exists
+        # First, check that the record exists
         check = supabase.table("raw_links").select("id, url, status, attempts").eq("url", url).execute()
         logging.info(f"   Found in DB: {len(check.data) if check.data else 0} records")
-
+        
         if not check.data or len(check.data) == 0:
             logging.error(f"❌ URL not found in raw_links: {url}")
             return False
         
-        # Perform update (remove updated_at if DB has a trigger)
+        # Perform update
         result = supabase.table("raw_links").update({
             "status": status,
             "attempts": current_attempts + 1
@@ -115,14 +115,44 @@ def update_link_status(url: str, status: str, current_attempts: int) -> bool:
         logging.error(traceback.format_exc())
         return False
 
+def create_driver_with_retry(max_retries=3):
+    """Create Chrome driver with retry logic"""
+    options = Options()
+    options.add_argument('--headless')
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
+    options.add_argument('--disable-gpu')
+    options.add_argument('--disable-blink-features=AutomationControlled')
+
+    # Disable images for faster loading
+    options.add_argument('--disable-images')
+    options.add_argument('--blink-settings=imagesEnabled=false')    
+    
+    # Add timeouts
+    options.page_load_strategy = 'eager'  # Don't wait for all resources
+    
+    for attempt in range(max_retries):
+        try:
+            driver = uc.Chrome(options=options)
+            
+            # Set timeouts for Selenium
+            driver.set_page_load_timeout(60)  # 60 seconds max for page load
+            driver.implicitly_wait(10)  # 10 seconds for element finding
+            
+            logging.info(f"✅ Driver initialized successfully (attempt {attempt + 1})")
+            return driver
+        except Exception as e:
+            logging.error(f"❌ Driver initialization failed (attempt {attempt + 1}/{max_retries}): {e}")
+            if attempt < max_retries - 1:
+                time.sleep(5)
+            else:
+                raise
 
 def main(start: int, end: int):
     """Load pending links from raw_links in the given range [start, end], parse them, and save into bronze_estate."""
-    # Supabase range() uses 0-based indexing
-    # If user passes --start 1 --end 100, we want records 0-99 in 0-based indexing
     offset = start - 1 if start > 0 else 0
     limit = end - start + 1
-
+    
     try:
         logging.info(f"📥 Fetching pending links (user range {start}-{end}, API range {offset}-{offset + limit - 1})...")
         resp = supabase.table("raw_links") \
@@ -134,52 +164,71 @@ def main(start: int, end: int):
     except Exception as e:
         logging.error(f"❌ Failed to fetch pending links: {e}")
         rows = []
-
+    
     if not rows:
         logging.warning(f"⚠️ No pending links found in range {start}-{end}")
         return
-
+    
     logging.info(f"✅ Found {len(rows)} pending links in range {start}-{end}")
-
+    
     # ============================================
-    # 🚀 Create driver for full batch
+    # 🚀 Create driver with retry logic
     # ============================================
     logging.info("🚀 Initializing Chrome driver...")
     
-    options = Options()
-    options.add_argument('--headless')
-    options.add_argument('--no-sandbox')
-    options.add_argument('--disable-dev-shm-usage')
-    options.add_argument('--disable-gpu')
-    options.add_argument('--disable-blink-features=AutomationControlled')
-    
     driver = None
     try:
-        driver = uc.Chrome(options=options)
-        logging.info("✅ Driver initialized successfully")
+        driver = create_driver_with_retry()
     except Exception as e:
-        logging.error(f"❌ Failed to initialize driver: {e}")
+        logging.error(f"❌ Failed to initialize driver after all retries: {e}")
         logging.error("Cannot proceed without driver. Exiting.")
         return
-
+    
     success_count = 0
     failed_count = 0
-
+    timeout_count = 0
+    
     try:
         for idx, row in enumerate(rows, 1):
-            url = row["url"].strip()  # del spaces
+            url = row["url"].strip()
             current_attempts = row.get("attempts", 0) or 0
             
             logging.info(f"\n{'='*60}")
             logging.info(f"🔄 [{idx}/{len(rows)}] Processing: {url}")
             logging.info(f"   Current attempts: {current_attempts}")
             
-            # Parse the URL
+            # Skip URLs that have failed too many times
+            if current_attempts >= 3:
+                logging.warning(f"   ⏭️ Skipping URL with {current_attempts} attempts")
+                continue
+            
+            # Parse the URL with timeout handling
             try:
                 record = parse_features(url, driver=driver)
                 logging.info(f"   ✅ Parsing completed")
+                
+            except TimeoutException as e:
+                logging.error(f"   ⏱️ Timeout during parsing: {e}")
+                record = {"status": "timeout", "url": url}
+                timeout_count += 1
+                
+                # Recreate driver after timeout
+                try:
+                    logging.info("   🔄 Recreating driver after timeout...")
+                    driver.quit()
+                    driver = create_driver_with_retry()
+                except Exception as driver_err:
+                    logging.error(f"   ❌ Failed to recreate driver: {driver_err}")
+                    break
+                    
+            except WebDriverException as e:
+                logging.error(f"   ❌ WebDriver error: {e}")
+                record = {"status": "webdriver_error", "url": url}
+                
             except Exception as e:
                 logging.error(f"   ❌ Parsing failed: {e}")
+                import traceback
+                logging.error(traceback.format_exc())
                 record = {"status": "failed", "url": url}
             
             # Determine the actual status based on parsing result
@@ -193,7 +242,6 @@ def main(start: int, end: int):
                 logging.info(f"   Save result: {'✅ Success' if saved else '❌ Failed'}")
                 
                 if saved:
-                    # Update link status to 'processed' or 'success'
                     logging.info(f"   🔄 Updating link status to 'processed'...")
                     updated = update_link_status(url, "processed", current_attempts)
                     if updated:
@@ -203,27 +251,36 @@ def main(start: int, end: int):
                         logging.error(f"   ❌ Failed to update link status")
                         failed_count += 1
                 else:
-                    # Parsing succeeded but saving failed
                     logging.info(f"   ⚠️ Parsing OK but saving failed, marking as 'save_failed'")
                     update_link_status(url, "save_failed", current_attempts)
                     failed_count += 1
             else:
                 # Parsing failed
-                logging.info(f"   ⚠️ Parsing failed, marking as 'parse_failed'")
-                update_link_status(url, "parse_failed", current_attempts)
+                status_map = {
+                    "timeout": "parse_timeout",
+                    "webdriver_error": "parse_error",
+                    "failed": "parse_failed"
+                }
+                final_status = status_map.get(parse_status, "parse_failed")
+                
+                logging.info(f"   ⚠️ Parsing failed, marking as '{final_status}'")
+                update_link_status(url, final_status, current_attempts)
                 failed_count += 1
             
             logging.info(f"{'='*60}\n")
             
             # Progress indicator every 10 records
             if idx % 10 == 0:
-                logging.info(f"📊 Progress: {idx}/{len(rows)} | ✅ {success_count} | ❌ {failed_count}")
-
-            #time.sleep(1)
+                logging.info(f"📊 Progress: {idx}/{len(rows)} | ✅ {success_count} | ❌ {failed_count} | ⏱️ {timeout_count}")
+            
+            # CRITICAL: Add delay between requests to avoid rate limiting
+            delay = random.uniform(2, 5)  # 2-5 seconds
+            logging.info(f"   ⏳ Waiting {delay:.1f}s before next request...")
+            time.sleep(delay)
             
     finally:
         # ============================================
-        # 🔚 close driver in the end
+        # 🔚 Close driver at the end
         # ============================================
         if driver:
             logging.info("🔚 Closing Chrome driver...")
@@ -232,14 +289,14 @@ def main(start: int, end: int):
                 logging.info("✅ Driver closed successfully")
             except Exception as e:
                 logging.error(f"⚠️ Error closing driver: {e}")
-
+    
     logging.info(f"🎉 Processing complete!")
-    logging.info(f"📊 Summary: ✅ {success_count} successful | ❌ {failed_count} failed | Total: {len(rows)}")
-
+    logging.info(f"📊 Summary: ✅ {success_count} successful | ❌ {failed_count} failed | ⏱️ {timeout_count} timeouts | Total: {len(rows)}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--start", type=int, required=True, help="Start index in raw_links")
     parser.add_argument("--end", type=int, required=True, help="End index in raw_links")
     args = parser.parse_args()
+    
     main(args.start, args.end)
