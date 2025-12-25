@@ -186,8 +186,8 @@ def parse_features(url: str, driver=None) -> dict:
         features.update(extract_list_features(
             soup,
             "div.styles_features__left__ON_QP",
-            "span.styles_group__key__uRhnQ",
-            "span.styles_group__value__XN7OI",
+            ".styles_group__key__uRhnQ",
+            ".styles_group__value__XN7OI",
             MAIN_FEATURES_MAP,
             "main_features"
         ))
@@ -195,7 +195,7 @@ def parse_features(url: str, driver=None) -> dict:
         features.update(extract_boolean_features(
             soup,
             "div.styles_features__right__Sn6fV",
-            "span.styles_group__key__uRhnQ",
+            ".styles_group__key__uRhnQ",
             ADDITIONAL_FEATURES_MAP,
             "additional_features"
         ))
