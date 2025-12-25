@@ -80,7 +80,7 @@ jobs:
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
           python -m pipeline.bronze.loader --start 0 --end 1000
-          #python -m pipeline.bronze.loader --start 1001 --end 2000
+          python -m pipeline.bronze.loader --start 1001 --end 2000
   # ==============================================================
   # 3. Silver → Supabase
   # ==============================================================
