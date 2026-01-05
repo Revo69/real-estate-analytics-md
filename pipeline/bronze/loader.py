@@ -157,7 +157,7 @@ def main(start: int, end: int):
         logging.info(f"📥 Fetching pending links (user range {start}-{end}, API range {offset}-{offset + limit - 1})...")
         resp = supabase.table("raw_links") \
             .select("url, attempts") \
-            .in_("status", ["pending", "parsed_failed"]) \
+            .in_("status", ["pending", "parse_failed"]) \
             .range(offset, offset + limit - 1) \
             .execute()
         rows = resp.data or []
