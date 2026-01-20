@@ -117,7 +117,7 @@ jobs:
       
       - name: Upload bronze logs
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: bronze-loader-logs
           path: logs/
