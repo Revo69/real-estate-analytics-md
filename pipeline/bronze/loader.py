@@ -189,7 +189,8 @@ def create_driver_with_retry(max_retries=5):
             # Create driver with version autodetection
             driver = uc.Chrome(
                 options=options,
-                version_main=None,  # Auto-detect Chrome version
+                # version_main=None,  # Auto-detect Chrome version
+                version_main=143, 
                 headless=True,
                 use_subprocess=True,
                 driver_executable_path=None  # Auto-detect driver path
