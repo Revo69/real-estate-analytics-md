@@ -6,11 +6,11 @@ import argparse
 from dotenv import load_dotenv
 from .parsers import parse_features
 from supabase import create_client, Client
-from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException, WebDriverException
 import undetected_chromedriver as uc
 import time
 import random
+import shutil
 
 # Load environment variables
 load_dotenv()
@@ -115,41 +115,143 @@ def update_link_status(url: str, status: str, current_attempts: int) -> bool:
         logging.error(traceback.format_exc())
         return False
 
-def create_driver_with_retry(max_retries=3):
-    """Create Chrome driver with retry logic"""
-    options = Options()
-    options.add_argument('--headless')
-    options.add_argument('--no-sandbox')
-    options.add_argument('--disable-dev-shm-usage')
-    options.add_argument('--disable-gpu')
-    options.add_argument('--disable-blink-features=AutomationControlled')
-
-    # Disable images for faster loading
-    options.add_argument('--disable-images')
-    options.add_argument('--blink-settings=imagesEnabled=false')    
+def cleanup_driver_cache():
+    """Clean up undetected_chromedriver cache"""
+    cache_paths = [
+        os.path.expanduser("~/.local/share/undetected_chromedriver"),
+        "/tmp/undetected_chromedriver",
+        "/tmp/.com.google.Chrome.*"
+    ]
     
-    # Add timeouts
-    options.page_load_strategy = 'eager'  # Don't wait for all resources
+    for cache_path in cache_paths:
+        try:
+            if '*' in cache_path:
+                # Handle glob patterns
+                import glob
+                for path in glob.glob(cache_path):
+                    if os.path.exists(path):
+                        shutil.rmtree(path, ignore_errors=True)
+            elif os.path.exists(cache_path):
+                shutil.rmtree(cache_path, ignore_errors=True)
+        except Exception as e:
+            logging.debug(f"   Cache cleanup error for {cache_path}: {e}")
+
+def create_driver_with_retry(max_retries=5):
+    """
+    Create Chrome driver with comprehensive retry logic.
+    Handles version mismatches, cache issues, and connection timeouts.
+    """
     
     for attempt in range(max_retries):
         try:
-            driver = uc.Chrome(options=options)
+            # Clean cache on retries
+            if attempt > 0:
+                logging.info(f"🔄 Retry {attempt + 1}/{max_retries}, cleaning cache...")
+                cleanup_driver_cache()
+                time.sleep(3)
             
-            # Set timeouts for Selenium
-            driver.set_page_load_timeout(60)  # 60 seconds max for page load
-            driver.implicitly_wait(10)  # 10 seconds for element finding
+            # CRITICAL: Create NEW options for each attempt
+            # Reusing ChromeOptions causes "you cannot reuse the ChromeOptions object" error
+            options = uc.ChromeOptions()
             
+            # Essential arguments
+            options.add_argument('--headless=new')  # New headless mode (Chrome 109+)
+            options.add_argument('--no-sandbox')
+            options.add_argument('--disable-dev-shm-usage')
+            options.add_argument('--disable-gpu')
+            options.add_argument('--disable-blink-features=AutomationControlled')
+            
+            # Speed optimizations
+            options.add_argument('--disable-extensions')
+            options.add_argument('--disable-images')
+            options.add_argument('--blink-settings=imagesEnabled=false')
+            options.add_argument('--disable-plugins')
+            options.add_argument('--disable-popup-blocking')
+            options.add_argument('--disable-default-apps')
+            
+            # Memory optimization
+            options.add_argument('--memory-pressure-off')
+            options.add_argument('--disable-background-timer-throttling')
+            
+            # CI environment specific
+            options.add_argument('--remote-debugging-port=9222')
+            options.add_argument('--remote-debugging-address=0.0.0.0')
+            options.add_argument('--disable-setuid-sandbox')
+            
+            # Page load strategy - don't wait for all resources
+            options.page_load_strategy = 'eager'
+            
+            # User agent to avoid detection
+            options.add_argument('--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+            
+            logging.info(f"   Creating driver (attempt {attempt + 1})...")
+            
+            # Create driver with version autodetection
+            driver = uc.Chrome(
+                options=options,
+                version_main=None,  # Auto-detect Chrome version
+                headless=True,
+                use_subprocess=True,
+                driver_executable_path=None  # Auto-detect driver path
+            )
+            
+            # Configure timeouts - increased for slow connections
+            driver.set_page_load_timeout(60)  # Page load timeout
+            driver.set_script_timeout(60)     # Script execution timeout
+            driver.implicitly_wait(10)        # Element finding timeout
+            
+            # Increase connection timeout for DevTools protocol
+            # This fixes "HTTPConnectionPool Read timed out" errors
+            try:
+                driver.command_executor.set_timeout(180)  # 3 minutes for DevTools
+            except AttributeError:
+                logging.debug("   Could not set command_executor timeout")
+            
+            # Test driver is working
+            driver.get("about:blank")
             logging.info(f"✅ Driver initialized successfully (attempt {attempt + 1})")
+            
             return driver
+            
         except Exception as e:
-            logging.error(f"❌ Driver initialization failed (attempt {attempt + 1}/{max_retries}): {e}")
+            error_msg = str(e)
+            logging.error(f"❌ Driver init failed (attempt {attempt + 1}/{max_retries}): {error_msg}")
+            
+            # Cleanup on error
+            cleanup_driver_cache()
+            
+            # Exponential backoff
             if attempt < max_retries - 1:
-                time.sleep(5)
+                wait_time = min(5 * (attempt + 1), 30)  # Cap at 30 seconds
+                logging.info(f"   ⏳ Waiting {wait_time}s before retry...")
+                time.sleep(wait_time)
             else:
+                logging.error("🚨 All driver initialization retries exhausted")
                 raise
 
+def is_driver_alive(driver) -> bool:
+    """Check if driver is still responsive"""
+    try:
+        driver.current_url
+        return True
+    except:
+        return False
+
+def recreate_driver(old_driver):
+    """Safely recreate driver after failure"""
+    try:
+        if old_driver:
+            old_driver.quit()
+    except:
+        pass
+    
+    return create_driver_with_retry(max_retries=3)
+
 def main(start: int, end: int):
-    """Load pending links from raw_links in the given range [start, end], parse them, and save into bronze_estate."""
+    """
+    Load pending links from raw_links in the given range [start, end], 
+    parse them, and save into bronze_estate.
+    """
     offset = start - 1 if start > 0 else 0
     limit = end - start + 1
     
@@ -172,21 +274,22 @@ def main(start: int, end: int):
     logging.info(f"✅ Found {len(rows)} pending links in range {start}-{end}")
     
     # ============================================
-    # 🚀 Create driver with retry logic
+    # Initialize Chrome driver
     # ============================================
     logging.info("🚀 Initializing Chrome driver...")
     
     driver = None
     try:
-        driver = create_driver_with_retry()
+        driver = create_driver_with_retry(max_retries=5)
     except Exception as e:
         logging.error(f"❌ Failed to initialize driver after all retries: {e}")
-        logging.error("Cannot proceed without driver. Exiting.")
+        logging.error("🚨 Cannot proceed without driver. Exiting.")
         return
     
     success_count = 0
     failed_count = 0
     timeout_count = 0
+    webdriver_errors = 0
     
     try:
         for idx, row in enumerate(rows, 1):
@@ -200,9 +303,15 @@ def main(start: int, end: int):
             # Skip URLs that have failed too many times
             if current_attempts >= 3:
                 logging.warning(f"   ⏭️ Skipping URL with {current_attempts} attempts")
+                update_link_status(url, "max_attempts_reached", current_attempts)
                 continue
             
-            # Parse the URL with timeout handling
+            # Check driver health before parsing
+            if not is_driver_alive(driver):
+                logging.warning("   🔄 Driver not responsive, recreating...")
+                driver = recreate_driver(driver)
+            
+            # Parse the URL with comprehensive error handling
             try:
                 record = parse_features(url, driver=driver)
                 logging.info(f"   ✅ Parsing completed")
@@ -215,16 +324,24 @@ def main(start: int, end: int):
                 # Recreate driver after timeout
                 try:
                     logging.info("   🔄 Recreating driver after timeout...")
-                    driver.quit()
-                    driver = create_driver_with_retry()
+                    driver = recreate_driver(driver)
                 except Exception as driver_err:
                     logging.error(f"   ❌ Failed to recreate driver: {driver_err}")
-                    break
+                    # Continue with potentially broken driver, will check health next iteration
                     
             except WebDriverException as e:
                 logging.error(f"   ❌ WebDriver error: {e}")
                 record = {"status": "webdriver_error", "url": url}
+                webdriver_errors += 1
                 
+                # Try to recreate driver
+                try:
+                    logging.info("   🔄 Recreating driver after WebDriver error...")
+                    driver = recreate_driver(driver)
+                except Exception as driver_err:
+                    logging.error(f"   ❌ Failed to recreate driver: {driver_err}")
+                    # Don't break - try to continue
+                    
             except Exception as e:
                 logging.error(f"   ❌ Parsing failed: {e}")
                 import traceback
@@ -271,16 +388,16 @@ def main(start: int, end: int):
             
             # Progress indicator every 10 records
             if idx % 10 == 0:
-                logging.info(f"📊 Progress: {idx}/{len(rows)} | ✅ {success_count} | ❌ {failed_count} | ⏱️ {timeout_count}")
+                logging.info(f"📊 Progress: {idx}/{len(rows)} | ✅ {success_count} | ❌ {failed_count} | ⏱️ {timeout_count} | 🔧 {webdriver_errors}")
             
-            # CRITICAL: Add delay between requests to avoid rate limiting
-            delay = random.uniform(2, 5)  # 2-5 seconds
+            # Rate limiting - random delay between requests
+            delay = random.uniform(3, 7)  # 3-7 seconds
             logging.info(f"   ⏳ Waiting {delay:.1f}s before next request...")
             time.sleep(delay)
             
     finally:
         # ============================================
-        # 🔚 Close driver at the end
+        # Cleanup
         # ============================================
         if driver:
             logging.info("🔚 Closing Chrome driver...")
@@ -289,9 +406,12 @@ def main(start: int, end: int):
                 logging.info("✅ Driver closed successfully")
             except Exception as e:
                 logging.error(f"⚠️ Error closing driver: {e}")
+        
+        # Final cache cleanup
+        cleanup_driver_cache()
     
     logging.info(f"🎉 Processing complete!")
-    logging.info(f"📊 Summary: ✅ {success_count} successful | ❌ {failed_count} failed | ⏱️ {timeout_count} timeouts | Total: {len(rows)}")
+    logging.info(f"📊 Summary: ✅ {success_count} successful | ❌ {failed_count} failed | ⏱️ {timeout_count} timeouts | 🔧 {webdriver_errors} webdriver errors | Total: {len(rows)}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
