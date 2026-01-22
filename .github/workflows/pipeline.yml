@@ -170,7 +170,7 @@ jobs:
           echo "🚀 Starting bronze batch 1 (0-500)..."
           python -m pipeline.bronze.loader --start 0 --end 500
         continue-on-error: true
-        timeout-minutes: 90
+        timeout-minutes: 120
       
       - name: Sleep between batches
         run: |
@@ -185,7 +185,7 @@ jobs:
           echo "🚀 Starting bronze batch 2 (501-1000)..."
           python -m pipeline.bronze.loader --start 501 --end 1000
         continue-on-error: true
-        timeout-minutes: 90
+        timeout-minutes: 120
       
       - name: Upload bronze logs
         if: always()
