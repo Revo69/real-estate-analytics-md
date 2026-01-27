@@ -204,9 +204,18 @@ def create_driver_with_retry(max_retries=5):
             # Increase connection timeout for DevTools protocol
             # This fixes "HTTPConnectionPool Read timed out" errors
             try:
-                driver.command_executor.set_timeout(180)  # 3 minutes for DevTools
-            except AttributeError:
-                logging.debug("   Could not set command_executor timeout")
+                # New way (Selenium 4.0+): configure timeout via client_config
+                if hasattr(driver, 'command_executor') and hasattr(driver.command_executor, '_client_config'):
+                    driver.command_executor._client_config.timeout = 180
+                # Fallback for older versions
+                elif hasattr(driver, 'command_executor'):
+                    import warnings
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore", DeprecationWarning)
+                        driver.command_executor.set_timeout(180)
+            except (AttributeError, Exception) as e:
+                logging.debug(f"   Could not set command_executor timeout: {e}")
+
             
             # Test driver is working
             driver.get("about:blank")
