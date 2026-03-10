@@ -172,6 +172,7 @@ jobs:
           python -m pipeline.bronze.loader --start 501 --end 1000
           python -m pipeline.bronze.loader --start 1001 --end 1500
           python -m pipeline.bronze.loader --start 1501 --end 2000
+          python -m pipeline.bronze.loader --start 2001 --end 2500
         continue-on-error: true
         timeout-minutes: 120
       
@@ -188,6 +189,10 @@ jobs:
           echo "🚀 Starting bronze batch 2 (0-500)..."
           python -m pipeline.bronze.loader --start 0 --end 500
           python -m pipeline.bronze.loader --start 501 --end 1000
+          python -m pipeline.bronze.loader --start 1001 --end 1500
+          python -m pipeline.bronze.loader --start 1501 --end 2000
+          python -m pipeline.bronze.loader --start 2001 --end 2500
+          python -m pipeline.bronze.loader --start 2501 --end 3000
         continue-on-error: true
         timeout-minutes: 120
       
