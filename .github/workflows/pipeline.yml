@@ -93,7 +93,6 @@ jobs:
         run: |
           echo "🚀 Starting bronze batch 1 (0-500)..."
           python -m pipeline.bronze.loader --start 0 --end 500
-          python -m pipeline.bronze.loader --start 501 --end 1000
         continue-on-error: true
         timeout-minutes: 120
       
@@ -109,20 +108,38 @@ jobs:
         run: |
           echo "🚀 Starting bronze batch 2 (0-500)..."
           python -m pipeline.bronze.loader --start 0 --end 500
-          python -m pipeline.bronze.loader --start 501 --end 1000
         continue-on-error: true
         timeout-minutes: 120
+
+      - name: Sleep between batches
+        run: |
+          echo "⏳ Waiting 30s between batches..."
+          sleep 30
         
       - name: Run bronze loader → Supabase (Batch 3)
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
-          echo "🚀 Starting bronze batch 2 (0-500)..."
+          echo "🚀 Starting bronze batch 3 (0-500)..."
           python -m pipeline.bronze.loader --start 0 --end 500
-          python -m pipeline.bronze.loader --start 501 --end 1000
         continue-on-error: true
-        timeout-minutes: 120        
+        timeout-minutes: 120
+
+      - name: Sleep between batches
+        run: |
+          echo "⏳ Waiting 30s between batches..."
+          sleep 30
+        
+      - name: Run bronze loader → Supabase (Batch 4)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          echo "🚀 Starting bronze batch 4 (0-500)..."
+          python -m pipeline.bronze.loader --start 0 --end 500
+        continue-on-error: true
+        timeout-minutes: 120
       
       - name: Upload bronze logs
         if: always()
