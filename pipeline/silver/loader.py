@@ -46,24 +46,38 @@ logging.basicConfig(
 )
 
 def parse_publication_date(raw_date: str):
-    """Convert 'Дата обновления:22 ноя. 2025, 01:10' → datetime.date(2025, 11, 22)"""
+    """Convert date strings to datetime.date:
+    - 'Дата обновления:22 ноя. 2025, 01:10' → date(2025, 11, 22)
+    - 'Дата обновления:20 фев, 18:55'        → date(2026, 2, 20)  ← новый формат
+    """
     if not raw_date:
         return None
     try:
-        # raw_date = raw_date.replace("Date updated:", "").strip()
-
         for prefix in ("Дата обновления:", "Дата публикации:"):
             if raw_date.startswith(prefix):
                 raw_date = raw_date.replace(prefix, "").strip()
                 break
 
         date_part, time_part = raw_date.split(",")
-        day, month_str, year = date_part.strip().split(" ")
+        date_tokens = date_part.strip().split(" ")
+
+        if len(date_tokens) == 3:
+            # Старый формат: "22 ноя. 2025"
+            day, month_str, year = date_tokens
+        elif len(date_tokens) == 2:
+            # Новый формат: "20 фев" — год берём текущий
+            day, month_str = date_tokens
+            year = str(datetime.now().year)
+        else:
+            raise ValueError(f"Unexpected date_part format: {date_part!r}")
+
         month = MONTHS_MAP.get(month_str.lower())
         if not month:
             raise ValueError(f"Unknown month: {month_str}")
+
         dt = datetime.strptime(f"{day}.{month}.{year} {time_part.strip()}", "%d.%m.%Y %H:%M")
         return dt.date()
+
     except Exception as e:
         logging.error(f"Failed to parse publication_date '{raw_date}': {e}")
         return None
