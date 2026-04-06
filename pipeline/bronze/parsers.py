@@ -198,6 +198,11 @@ def parse_features(url: str, driver=None) -> dict:
         features.update(extract_info_item(soup, "Опубликовано:", "publication_date"))
         features.update(extract_info_item(soup, "Тип предложения:", "deal_type"))
 
+        items = soup.select("p.styles_advert__info__item___cXvq")
+        logging.info(f"info items found: {len(items)}")
+        for p in items:
+            logging.info(f"  → {p.get_text(strip=True)}")
+
         # --- Пользователь ---
         features.update(extract_text(soup, "a.styles_user__card__login___Ug2V", "user_login"))
 
