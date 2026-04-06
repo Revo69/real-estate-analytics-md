@@ -14,37 +14,28 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
 }
 
-def extract_list_features(soup, block_testid, key_selector, value_selectors, key_map, block_name):
+def extract_list_features(soup, block_selector, key_selector, value_selector, key_map, block_name):
     result = {block_name: {}}
     unknown_keys = []
 
-    block = soup.find("div", attrs={"data-testid": block_testid})
-    if not block:
+    block = soup.select_one(block_selector)
+    if block:
+        for li in block.select("li"):
+            key_tag = li.select_one(key_selector)
+            value_tag = li.select_one(value_selector)
+            if not key_tag or not value_tag:
+                continue
+
+            raw_key = key_tag.get_text(strip=True)
+            raw_value = value_tag.get_text(strip=True)
+
+            clean_key = key_map.get(raw_key)
+            if clean_key:
+                result[block_name][clean_key] = raw_value
+            else:
+                unknown_keys.append(raw_key)
+    else:
         result[f"{block_name}_status"] = "Нет блока характеристик"
-        return result
-
-    for li in block.select("li"):
-        key_tag = li.select_one(key_selector)
-        if not key_tag:
-            continue
-
-        value_tag = None
-        for vs in value_selectors:
-            value_tag = li.select_one(vs)
-            if value_tag:
-                break
-
-        if not value_tag:
-            continue
-
-        raw_key = key_tag.get_text(strip=True)
-        raw_value = value_tag.get_text(strip=True)
-
-        clean_key = key_map.get(raw_key)
-        if clean_key:
-            result[block_name][clean_key] = raw_value
-        else:
-            unknown_keys.append(raw_key)
 
     if unknown_keys:
         result[f"unknown_{block_name}"] = unknown_keys
@@ -52,26 +43,21 @@ def extract_list_features(soup, block_testid, key_selector, value_selectors, key
     return result
 
 
-def extract_boolean_features(soup, block_testid, item_selector, key_map, block_name):
+def extract_boolean_features(soup, block_selector, item_selector, key_map, block_name):
     result = {block_name: {}}
     unknown_keys = []
 
-    block = soup.find("div", attrs={"data-testid": block_testid})
-    if not block:
+    block = soup.select_one(block_selector)
+    if block:
+        for item in block.select(item_selector):
+            raw_key = item.get_text(strip=True)
+            mapped_key = key_map.get(raw_key)
+            if mapped_key:
+                result[block_name][mapped_key] = True
+            else:
+                unknown_keys.append(raw_key)
+    else:
         result[f"{block_name}_status"] = "Нет блока характеристик"
-        return result
-
-    for li in block.select(item_selector):
-        # Берём текст ключа из span внутри <li>, не из самого <li>
-        key_tag = li.select_one(".styles_group__key__SXHV5")
-        if not key_tag:
-            continue
-        raw_key = key_tag.get_text(strip=True)
-        mapped_key = key_map.get(raw_key)
-        if mapped_key:
-            result[block_name][mapped_key] = True
-        else:
-            unknown_keys.append(raw_key)
 
     if unknown_keys:
         result[f"unknown_{block_name}"] = unknown_keys
@@ -191,27 +177,27 @@ def parse_features(url: str, driver=None) -> dict:
         features = {"url": url, "status": "success"}
 
         features.update(extract_attr(soup, 'meta[property="product:retailer_item_id"]', "content", "ad_id"))
-        features.update(extract_text(soup, "span.styles_advert__info__item__value__y3xkE", "publication_date", remove_prefix="Опубликовано:"))
-        features.update(extract_text(soup, "a.styles_user__card__login___Ug2V", "user_login"))
-        features.update(extract_text(soup, "p.styles_advert__info__item___cXvq", "deal_type", remove_prefix="Тип предложения:"))
-        features.update(extract_text(soup, "div.styles_map__title__UgISm", "region"))
-        features.update(extract_text(soup, "div.styles_description__body__qh1qw", "description"))
+        features.update(extract_text(soup, "p.styles_date__voWnk", "publication_date", remove_prefix="Дата публикации:"))
+        features.update(extract_text(soup, "a.styles_owner__login__VKE71", "user_login"))
+        features.update(extract_text(soup, "p.styles_type___J9Dy", "deal_type", remove_prefix="Тип:"))
+        features.update(extract_text(soup, "div.styles_region__7lsaj", "region", remove_prefix="Регион:"))
+        features.update(extract_text(soup, "div.styles_description__8_RRa div.styles_textcontent__XH6FS.styles_desktop__d_kP8", "description"))
 
         features.update(extract_list_features(
             soup,
-            block_testid="Характеристики",
-            key_selector=".styles_group__key__SXHV5",
-            value_selectors=[".styles_group__value__BlYqu", ".styles_group__link__GA7Xf"],
-            key_map=MAIN_FEATURES_MAP,
-            block_name="main_features"
+            "div.styles_features__left__ON_QP",
+            ".styles_group__key__uRhnQ",
+            ".styles_group__value__XN7OI",
+            MAIN_FEATURES_MAP,
+            "main_features"
         ))
 
         features.update(extract_boolean_features(
             soup,
-            block_testid="Дополнительно",              # ← было "Дополнительные характеристики"
-            item_selector="li.styles_group__feature__GsOUi",  # ← весь <li>, ключ внутри
-            key_map=ADDITIONAL_FEATURES_MAP,
-            block_name="additional_features"
+            "div.styles_features__right__Sn6fV",
+            ".styles_group__key__uRhnQ",
+            ADDITIONAL_FEATURES_MAP,
+            "additional_features"
         ))
 
         # 💰 Prices in JSON (now with all currencies)
