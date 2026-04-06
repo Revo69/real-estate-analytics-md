@@ -200,9 +200,8 @@ def parse_features(url: str, driver=None) -> dict:
         features.update(extract_attr(soup, 'meta[property="product:retailer_item_id"]', "content", "ad_id"))
         features.update(extract_text(
             soup,
-            "span.styles_advert__info__item__value__y3xkE",
-            "publication_date",
-            remove_prefixes=["Опубликовано:", "Обновлено:"]
+            "p.styles_advert__info__item___cXvq span.styles_advert__info__item__value__y3xkE",
+            "publication_date"
         ))
         features.update(extract_text(soup, "a.styles_user__card__login___Ug2V", "user_login"))
         features.update(extract_text(soup, "p.styles_advert__info__item___cXvq", "deal_type", remove_prefix="Тип предложения:"))
