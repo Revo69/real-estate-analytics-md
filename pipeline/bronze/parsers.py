@@ -178,7 +178,7 @@ def parse_features(url: str, driver=None) -> dict:
         driver.get(url)
 
         try:
-            WebDriverWait(driver, 10).until(
+            WebDriverWait(driver, 15).until(
                 EC.presence_of_element_located(
                     (By.CSS_SELECTOR, "div.styles_advert__info__container__XKBza")
                 )
