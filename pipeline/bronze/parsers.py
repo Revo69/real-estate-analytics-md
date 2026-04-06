@@ -1,5 +1,4 @@
 import re
-import requests
 import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -10,17 +9,47 @@ from typing import Dict, Optional
 from utils.rates import get_current_rates, convert_currency
 
 
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
-}
+def extract_attr(soup, selector, attr_name, key_name):
+    tag = soup.select_one(selector)
+    if not tag:
+        return {key_name: None}
+    return {key_name: tag.get(attr_name)}
+
+
+def extract_text(soup, selector, key_name, remove_prefix=None):
+    tag = soup.select_one(selector)
+    if not tag:
+        return {key_name: None}
+    text = tag.get_text(strip=True)
+    if remove_prefix and text.startswith(remove_prefix):
+        text = text[len(remove_prefix):].strip()
+    return {key_name: text or None}
+
+
+def extract_info_item(soup, label: str, key_name: str) -> dict:
+    """
+    Найти <p class="styles_advert__info__item___cXvq"> по началу текста,
+    вернуть текст вложенного <span>.
+    Пример: <p>Опубликовано:<span>3 апр. 2026, 16:33</span></p>
+    """
+    for p in soup.select("p.styles_advert__info__item___cXvq"):
+        if p.get_text(strip=True).startswith(label):
+            span = p.select_one("span.styles_advert__info__item__value__y3xkE")
+            return {key_name: span.get_text(strip=True) if span else None}
+    return {key_name: None}
+
 
 def extract_list_features(soup, block_testid, key_selector, value_selectors, key_map, block_name):
+    """
+    Парсинг блока характеристик (ключ→значение).
+    Ищет блок по data-testid, обходит все <li> в обеих колонках.
+    """
     result = {block_name: {}}
     unknown_keys = []
 
     block = soup.find("div", attrs={"data-testid": block_testid})
     if not block:
-        result[f"{block_name}_status"] = "Нет блока характеристик"
+        result[f"{block_name}_status"] = "block not found"
         return result
 
     for li in block.select("li"):
@@ -53,16 +82,19 @@ def extract_list_features(soup, block_testid, key_selector, value_selectors, key
 
 
 def extract_boolean_features(soup, block_testid, item_selector, key_map, block_name):
+    """
+    Парсинг блока дополнительных характеристик (наличие = True).
+    Ищет блок по data-testid, факт присутствия <li> = признак активен.
+    """
     result = {block_name: {}}
     unknown_keys = []
 
     block = soup.find("div", attrs={"data-testid": block_testid})
     if not block:
-        result[f"{block_name}_status"] = "Нет блока характеристик"
+        result[f"{block_name}_status"] = "block not found"
         return result
 
     for li in block.select(item_selector):
-        # Берём текст ключа из span внутри <li>, не из самого <li>
         key_tag = li.select_one(".styles_group__key__SXHV5")
         if not key_tag:
             continue
@@ -78,53 +110,8 @@ def extract_boolean_features(soup, block_testid, item_selector, key_map, block_n
 
     return result
 
-def extract_attr(soup, selector, attr_name, key_name):
-    tag = soup.select_one(selector)
-    if not tag:
-        return {key_name: None}
-    return {key_name: tag.get(attr_name)}
-
-def extract_labeled_text(soup, label, key_name, tag_name="p", value_selector="span"):
-    normalized_label = label.strip()
-    for tag in soup.select(tag_name):
-        raw_text = tag.get_text(" ", strip=True)
-        if normalized_label in raw_text:
-            value_tag = tag.select_one(value_selector)
-            if value_tag:
-                return {key_name: value_tag.get_text(strip=True)}
-            value_start = raw_text.find(normalized_label)
-            if value_start != -1:
-                value = raw_text[value_start + len(normalized_label):].strip()
-                return {key_name: value or None}
-    return {key_name: None}
-
-def extract_text(soup, selector, key_name, mapping=None, normalize=True, remove_prefix=None, remove_prefixes=None):
-    tag = soup.select_one(selector)
-    if not tag:
-        return {key_name: None}
-
-    text = tag.get_text(strip=True)
-
-    # Поддержка нескольких префиксов
-    if remove_prefixes:
-        for prefix in remove_prefixes:
-            if text.startswith(prefix):
-                text = text[len(prefix):]
-                break
-    elif remove_prefix and text.startswith(remove_prefix):
-        text = text[len(remove_prefix):]
-
-    if normalize:
-        text = text.strip() or None
-
-    if mapping and text in mapping:
-        text = mapping[text]
-
-    return {key_name: text}
-
 
 def clean_number(num_str: str) -> Optional[int]:
-    """Clean numeric string from spaces and non-breaking spaces."""
     if not num_str:
         return None
     try:
@@ -132,113 +119,95 @@ def clean_number(num_str: str) -> Optional[int]:
     except (ValueError, AttributeError):
         return None
 
+
 def get_converted_prices(main_price: int, main_currency: str) -> Dict[str, Optional[int]]:
-    """Convert the main price to all currencies using current exchange rates."""
     result = {"mdl": None, "eur": None, "usd": None}
-    
     if not main_price or not main_currency:
         return result
-    
     main_currency = main_currency.lower()
     result[main_currency] = main_price
-    
-        # Convert to other currencies using current exchange rates
     for currency in ["mdl", "eur", "usd"]:
         if currency != main_currency:
             result[currency] = convert_currency(main_price, main_currency, currency)
-    
     return result
 
+
 def extract_all_prices(soup: BeautifulSoup) -> Dict[str, Optional[int]]:
-    """
-    Extract prices in all currencies.
-    Strategy: parse what's in HTML; convert the rest using current exchange rates.
-    """
     result = {"mdl": None, "eur": None, "usd": None}
-    
+
     price_container = soup.find("div", class_=re.compile(r"styles_footer__"))
     if not price_container:
         return result
-    
-    # Get full text from the price block
+
     full_text = price_container.get_text(separator=" ", strip=True)
-        
-        # Parse any found currencies
+
     found_any = False
-    
+
     if m := re.search(r"([\d\s\u00A0]+)\s*€", full_text):
         result["eur"] = clean_number(m.group(1))
         found_any = True
-    
+
     if m := re.search(r"([\d\s\u00A0]+)\s*\$", full_text):
         result["usd"] = clean_number(m.group(1))
         found_any = True
-    
+
     if m := re.search(r"([\d\s\u00A0]+)\s*MDL", full_text):
         result["mdl"] = clean_number(m.group(1))
         found_any = True
-    
-    # If at least one currency is found, recalculate the others
+
     if found_any:
-        # Determine the main currency (not None)
-        main_currency = None
-        main_price = None
-        
+        main_currency, main_price = None, None
         if result["eur"]:
-            main_currency = "eur"
-            main_price = result["eur"]
+            main_currency, main_price = "eur", result["eur"]
         elif result["usd"]:
-            main_currency = "usd"
-            main_price = result["usd"]
+            main_currency, main_price = "usd", result["usd"]
         elif result["mdl"]:
-            main_currency = "mdl"
-            main_price = result["mdl"]
-        
-        # Convert missing currencies
+            main_currency, main_price = "mdl", result["mdl"]
+
         if main_currency and main_price:
             converted = get_converted_prices(main_price, main_currency)
             for currency in ["mdl", "eur", "usd"]:
                 if result[currency] is None:
                     result[currency] = converted[currency]
-    
+
     return result
 
+
 def parse_features(url: str, driver=None) -> dict:
-    
     try:
         driver.get(url)
-        
-        # Wait briefly for page to settle, but don't block on specific element
-        # (some pages may not have all elements).
+
         try:
-            WebDriverWait(driver, 3).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "body"))
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located(
+                    (By.CSS_SELECTOR, "div.styles_advert__info__container__XKBza")
+                )
             )
         except Exception:
-            # If wait fails, continue with what we have
             pass
-        
-        soup = BeautifulSoup(driver.page_source, "html.parser")
 
+        soup = BeautifulSoup(driver.page_source, "html.parser")
         features = {"url": url, "status": "success"}
 
-        features.update(extract_attr(soup, 'meta[property="product:retailer_item_id"]', "content", "ad_id"))
-        pub_date = extract_labeled_text(soup, "Опубликовано:", "publication_date")
-        if pub_date["publication_date"] is None:
-            pub_date = extract_text(
-                soup,
-                "p[class^='styles_advert__info__item'] span[class^='styles_advert__info__item__value']",
-                "publication_date"
-            )
-        features.update(pub_date)
+        # --- Мета ---
+        features.update(extract_attr(
+            soup, 'meta[property="product:retailer_item_id"]', "content", "ad_id"
+        ))
+
+        # --- Инфо-блок: дата, просмотры, тип сделки ---
+        features.update(extract_info_item(soup, "Опубликовано:", "publication_date"))
+        features.update(extract_info_item(soup, "Тип предложения:", "deal_type"))
+
+        # --- Пользователь ---
         features.update(extract_text(soup, "a.styles_user__card__login___Ug2V", "user_login"))
-        deal_type = extract_labeled_text(soup, "Тип предложения:", "deal_type")
-        if deal_type["deal_type"] is None:
-            deal_type = extract_text(soup, "p[class^='styles_advert__info__item']", "deal_type", remove_prefix="Тип предложения:")
-        features.update(deal_type)
-        features.update(extract_text(soup, "div[class^='styles_map__title']", "region"))
+
+        # --- Адрес ---
+        features.update(extract_text(soup, "div.styles_map__title__UgISm", "region"))
+
+        # --- Описание ---
         features.update(extract_text(soup, "div.styles_description__body__qh1qw", "description"))
 
+        # --- Характеристики (ключ → значение) ---
         features.update(extract_list_features(
             soup,
             block_testid="Характеристики",
@@ -248,19 +217,19 @@ def parse_features(url: str, driver=None) -> dict:
             block_name="main_features"
         ))
 
+        # --- Дополнительно (boolean) ---
         features.update(extract_boolean_features(
             soup,
-            block_testid="Дополнительно",              # ← было "Дополнительные характеристики"
-            item_selector="li.styles_group__feature__GsOUi",  # ← весь <li>, ключ внутри
+            block_testid="Дополнительно",
+            item_selector="li.styles_group__feature__GsOUi",
             key_map=ADDITIONAL_FEATURES_MAP,
             block_name="additional_features"
         ))
 
-        # 💰 Prices in JSON (now with all currencies)
+        # --- Цены ---
         features["price_json"] = extract_all_prices(soup)
 
         return features
 
     except Exception as e:
         return {"url": url, "status": f"error: {e}"}
-
