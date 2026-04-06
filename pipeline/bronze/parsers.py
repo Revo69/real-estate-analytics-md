@@ -207,11 +207,17 @@ def parse_features(url: str, driver=None) -> dict:
     
     try:
         driver.get(url)
-
-        # Wait for dynamic page content to appear before parsing.
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "div[class^='styles_map__title']"))
-        )
+        
+        # Wait briefly for page to settle, but don't block on specific element
+        # (some pages may not have all elements).
+        try:
+            WebDriverWait(driver, 3).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "body"))
+            )
+        except Exception:
+            # If wait fails, continue with what we have
+            pass
+        
         soup = BeautifulSoup(driver.page_source, "html.parser")
 
         features = {"url": url, "status": "success"}
