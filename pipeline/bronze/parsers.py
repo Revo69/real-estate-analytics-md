@@ -84,6 +84,20 @@ def extract_attr(soup, selector, attr_name, key_name):
         return {key_name: None}
     return {key_name: tag.get(attr_name)}
 
+def extract_labeled_text(soup, label, key_name, tag_name="p", value_selector="span"):
+    normalized_label = label.strip()
+    for tag in soup.select(tag_name):
+        raw_text = tag.get_text(" ", strip=True)
+        if normalized_label in raw_text:
+            value_tag = tag.select_one(value_selector)
+            if value_tag:
+                return {key_name: value_tag.get_text(strip=True)}
+            value_start = raw_text.find(normalized_label)
+            if value_start != -1:
+                value = raw_text[value_start + len(normalized_label):].strip()
+                return {key_name: value or None}
+    return {key_name: None}
+
 def extract_text(soup, selector, key_name, mapping=None, normalize=True, remove_prefix=None, remove_prefixes=None):
     tag = soup.select_one(selector)
     if not tag:
@@ -193,19 +207,30 @@ def parse_features(url: str, driver=None) -> dict:
     
     try:
         driver.get(url)
+
+        # Wait for dynamic page content to appear before parsing.
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "div[class^='styles_map__title']"))
+        )
         soup = BeautifulSoup(driver.page_source, "html.parser")
 
         features = {"url": url, "status": "success"}
 
         features.update(extract_attr(soup, 'meta[property="product:retailer_item_id"]', "content", "ad_id"))
-        features.update(extract_text(
-            soup,
-            "p.styles_advert__info__item___cXvq span.styles_advert__info__item__value__y3xkE",
-            "publication_date"
-        ))
+        pub_date = extract_labeled_text(soup, "Опубликовано:", "publication_date")
+        if pub_date["publication_date"] is None:
+            pub_date = extract_text(
+                soup,
+                "p[class^='styles_advert__info__item'] span[class^='styles_advert__info__item__value']",
+                "publication_date"
+            )
+        features.update(pub_date)
         features.update(extract_text(soup, "a.styles_user__card__login___Ug2V", "user_login"))
-        features.update(extract_text(soup, "p.styles_advert__info__item___cXvq", "deal_type", remove_prefix="Тип предложения:"))
-        features.update(extract_text(soup, "div.styles_map__title__UgISm", "region"))
+        deal_type = extract_labeled_text(soup, "Тип предложения:", "deal_type")
+        if deal_type["deal_type"] is None:
+            deal_type = extract_text(soup, "p[class^='styles_advert__info__item']", "deal_type", remove_prefix="Тип предложения:")
+        features.update(deal_type)
+        features.update(extract_text(soup, "div[class^='styles_map__title']", "region"))
         features.update(extract_text(soup, "div.styles_description__body__qh1qw", "description"))
 
         features.update(extract_list_features(
