@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 from .mappings import MAIN_FEATURES_MAP, ADDITIONAL_FEATURES_MAP
 from typing import Dict, Optional
 from utils.rates import get_current_rates, convert_currency
-
+import logging
 
 def extract_attr(soup, selector, attr_name, key_name):
     tag = soup.select_one(selector)
