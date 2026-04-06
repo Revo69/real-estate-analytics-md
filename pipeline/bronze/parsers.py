@@ -84,14 +84,20 @@ def extract_attr(soup, selector, attr_name, key_name):
         return {key_name: None}
     return {key_name: tag.get(attr_name)}
 
-def extract_text(soup, selector, key_name, mapping=None, normalize=True, remove_prefix=None):
+def extract_text(soup, selector, key_name, mapping=None, normalize=True, remove_prefix=None, remove_prefixes=None):
     tag = soup.select_one(selector)
     if not tag:
         return {key_name: None}
 
     text = tag.get_text(strip=True)
 
-    if remove_prefix and text.startswith(remove_prefix):
+    # Поддержка нескольких префиксов
+    if remove_prefixes:
+        for prefix in remove_prefixes:
+            if text.startswith(prefix):
+                text = text[len(prefix):]
+                break
+    elif remove_prefix and text.startswith(remove_prefix):
         text = text[len(remove_prefix):]
 
     if normalize:
@@ -101,6 +107,7 @@ def extract_text(soup, selector, key_name, mapping=None, normalize=True, remove_
         text = mapping[text]
 
     return {key_name: text}
+
 
 def clean_number(num_str: str) -> Optional[int]:
     """Clean numeric string from spaces and non-breaking spaces."""
@@ -191,7 +198,12 @@ def parse_features(url: str, driver=None) -> dict:
         features = {"url": url, "status": "success"}
 
         features.update(extract_attr(soup, 'meta[property="product:retailer_item_id"]', "content", "ad_id"))
-        features.update(extract_text(soup, "span.styles_advert__info__item__value__y3xkE", "publication_date", remove_prefix="Опубликовано:"))
+        features.update(extract_text(
+            soup,
+            "span.styles_advert__info__item__value__y3xkE",
+            "publication_date",
+            remove_prefixes=["Опубликовано:", "Обновлено:"]
+        ))
         features.update(extract_text(soup, "a.styles_user__card__login___Ug2V", "user_login"))
         features.update(extract_text(soup, "p.styles_advert__info__item___cXvq", "deal_type", remove_prefix="Тип предложения:"))
         features.update(extract_text(soup, "div.styles_map__title__UgISm", "region"))
