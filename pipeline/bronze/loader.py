@@ -4,7 +4,10 @@ import logging
 import uuid
 import argparse
 from dotenv import load_dotenv
-from .parsers import parse_features
+
+#from .parsers import parse_features
+from .parsers_old import parse_features
+
 from supabase import create_client, Client
 from selenium.common.exceptions import TimeoutException, WebDriverException
 import undetected_chromedriver as uc
