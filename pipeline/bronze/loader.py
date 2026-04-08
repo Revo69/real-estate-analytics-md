@@ -182,7 +182,7 @@ def create_driver_with_retry(max_retries=5):
             options.add_argument('--disable-setuid-sandbox')
             
             # Page load strategy - don't wait for all resources
-            options.page_load_strategy = 'eager'
+            #options.page_load_strategy = 'eager'
             
             # User agent to avoid detection
             options.add_argument('--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
