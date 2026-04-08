@@ -1,3 +1,204 @@
+
+
+loader.py
+py
+
+
+mappings.py
+51 lines
+
+py
+
+
+parsers.py
+227 lines
+
+py
+
+хочу протестить скрипты пайплайна у себя локально для скорости. надо их модифицировать для запуска локально. на вход будет одна строка (
+
+https://999.md/ru/89760365
+)
+
+19:22
+Покажи loader.py — он в контексте не отображается, только путь. Нужно понять структуру пайплайна целиком, прежде чем адаптировать.
+
+
+Read loader.py
+Read loader.py
+Всё ясно. Сделаю отдельный debug_single.py — автономный скрипт, который:
+
+принимает URL аргументом (или хардкодом)
+без Supabase, без raw_links
+выводит результат в консоль + сохраняет в JSON
+убирает relative imports (.parsers, .mappings)
+
+Created a file, read a file
+Created a file, read a file
+Клади debug_single.py в корень проекта (рядом с папкой scraper/ или там где лежат parsers.py/mappings.py).
+
+**Зап
+
+Debug single
+PY 
+Claude's response was interrupted
+
+import re import logging import undetected_chromedriver as uc from selenium.webdriver.common.by import By from selenium.webdriver.support.ui import WebDriverWait from selenium.webdriver.support import expected_conditions as EC from bs4 import BeautifulSoup from .mappings import MAIN_FEATURES_
+
+pasted
+
+19:23
+Вижу проблему — parsers.py импортирует from utils.rates import get_current_rates, convert_currency, которого у тебя нет локально при изолированном запуске.
+
+Обновлю debug_single.py — заглушу convert_currency моком прямо внутри скрипта, чтобы не нужно было трогать parsers.py вообще:
+
+
+Created a file, ran a command, read a file
+Created a file, ran a command, read a file
+Клади в корень проекта и запускай:
+
+bash
+python debug_single.py https://999.md/ru/89760365
+Что изменилось по сравнению с первой версией:
+
+Ключевое — мок utils.rates регистрируется в sys.modules до импорта parsers.py. Python при встрече from utils.rates import ... внутри parsers.py найдёт уже готовый модуль-заглушку и не пойдёт искать реальный файл. convert_currency возвращает None — это нормально, потому что цены ($, €, MDL) парсятся прямо со страницы, конвертация нужна только для заполнения отсутствующих валют.
+
+Порядок импорта принципиален:
+
+sys.modules["utils.rates"] = мок
+только потом from scraper.parsers import parse_features
+Если поменяешь местами — получишь ImportError. Это классический паттерн для мокирования внешних зависимостей без изменения исходников.
+
+Debug single
+PY 
+
+rates.py
+76 lines
+
+py
+
+19:25
+rates.py простой и самодостаточный — мок не нужен, просто используем реальный файл. Обновляю debug_single.py:
+
+
+Ran a command, read a file
+Ran a command, read a file
+Скрипт стал проще — мок убран полностью. rates.py использует публичный API с fallback-константами, поэтому работает локально из коробки без .env и без Supabase.
+
+Единственное что нужно проверить — наличие __init__.py в обеих папках:
+
+project_root/
+├── debug_single.py
+├── scraper/
+│   ├── __init__.py   ← нужен (может быть пустым)
+│   ├── parsers.py
+│   └── mappings.py
+└── utils/
+    ├── __init__.py   ← нужен (может быть пустым)
+    └── rates.py
+Если __init__.py нет — Python не увидит их как пакеты и импорт упадёт с ModuleNotFoundError.
+
+Debug single
+PY 
+
+026-04-08 19:29:00] INFO: patching driver executable C:\Users\123\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe Traceback (most recent call last): File "c:\Users\123\Documents\Projects\Python\parser-999-new\debug_single.py", line 110, in <module> main() File "c:\Use
+
+pasted
+
+19:29
+Классический mismatch: Chrome у тебя 146, а undetected_chromedriver скачал драйвер под 147. Фикс — явно указать version_main=146:
+
+
+Ran a command, read a file
+Ran a command, read a file
+Одна строка изменилась:
+
+python
+# было
+driver = uc.Chrome(options=options, headless=True, use_subprocess=True)
+
+# стало
+driver = uc.Chrome(options=options, version_main=146, headless=True, use_subprocess=True)
+Перед повторным запуском удали закешированный драйвер — иначе uc может использовать старый (147-й):
+
+powershell
+Remove-Item -Recurse -Force "$env:APPDATA\undetected_chromedriver"
+Потом запускай как обычно. Когда обновишь Chrome до 147 — просто убери version_main или поменяй цифру.
+
+Debug single
+PY 
+[2026-04-08 19:31:30] INFO: 💾 Сохранено: c:\Users\123\Documents\Projects\Python\parser-999-new\debug_output.json
+[2026-04-08 19:31:30] INFO: 📊 status=success | ad_id=89760365 | price={'mdl': 2924694, 'eur': 145000, 'usd': 167511}
+[2026-04-08 19:31:30] INFO: ensuring close
+Exception ignored in: <function Chrome.__del__ at 0x000002646800C2C0>
+Traceback (most recent call last):
+  File "C:\Users\123\AppData\Local\Programs\Python\Python311\Lib\site-packages\undetected_chromedriver\__init__.py", line 843, in __del__
+    self.quit()
+  File "C:\Users\123\AppData\Local\Programs\Python\Python311\Lib\site-packages\undetected_chromedriver\__init__.py", line 798, in quit
+    time.sleep(0.1)
+OSError: [WinError 6] Неверный дескриптор
+
+Show more
+19:32
+Работает! status=success, ad_id=89760365, цены распарсились корректно.
+
+OSError: [WinError 6] в конце — не ошибка парсинга, это uc пытается закрыть уже закрытый процесс Chrome в деструкторе __del__. Игнорируй, на данные не влияет. Если мешает в логах — можно подавить:
+
+python
+# в create_driver(), после uc.Chrome(...)
+import warnings
+warnings.filterwarnings("ignore")
+Или просто оставь как есть — в продакшн-коде (loader.py) этого нет, там driver.quit() вызывается явно в finally.
+
+{
+  "url": "https://999.md/ru/89760365",
+  "status": "success",
+  "ad_id": "89760365",
+  "publication_date": null,
+  "user_login": null,
+  "deal_type": null,
+  "region": null,
+  "description": null,
+  "main_features": {},
+  "main_features_status": "Нет блока характеристик",
+  "additional_features": {},
+  "additional_features_status": "Нет блока характеристик",
+  "price_json": {
+    "mdl": 2924694,
+    "eur": 145000,
+    "usd": 167511
+  }
+}
+Show more
+19:32
+Цены парсятся, но всё остальное — null и пустые блоки. Значит страница грузится не полностью — JS-контент не успевает отрендериться до того, как BeautifulSoup читает page_source.
+
+Проблема в page_load_strategy = "eager" — он не ждёт JS. Плюс WebDriverWait в parse_features ждёт только один селектор (p.styles_advert__info__item___cXvq), который, видимо, тоже не появляется.
+
+Нужно диагностировать что реально есть в HTML. Добавь в debug_single.py сохранение сырого HTML:
+
+
+Ran 2 commands, read a file
+Ran 2 commands, read a file
+
+read current file
+
+Script
+
+add HTML dump and CSS class checks
+bash
+
+cat > /mnt/user-data/outputs/debug_single.py << 'PYEOF'
+"""
+debug_single.py — локальный тест парсинга одного URL без Supabase.
+
+Использование:
+    python debug_single.py https://999.md/ru/89760365
+    python debug_single.py          # DEFAULT_URL
+
+Результат: консоль + debug_output.json + debug_page.html рядом со скриптом.
+"""
+
 name: Real Estate Pipeline
 
 on:
@@ -11,13 +212,85 @@ permissions:
 
 jobs:
 
-
+  collect-links:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    
+    steps:
+      - uses: actions/checkout@v6
+      
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      
+      - name: Cache pip dependencies
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Install latest stable Chrome + auto-matched driver
+        uses: browser-actions/setup-chrome@v2
+        with:
+          chrome-version: stable
+      
+      - name: Clean & force correct undetected-chromedriver version
+        run: |
+          echo "🔧 Setting up Chrome Driver for links collection..."
+          
+          # Clean all caches
+          rm -rf ~/.local/share/undetected_chromedriver
+          rm -rf /tmp/undetected_chromedriver
+          rm -rf /tmp/.com.google.Chrome.*
+          
+          # Get Chrome major version
+          MAJOR=$(google-chrome --version | grep -oE '[0-9]+' | head -1)
+          
+          # Create cache with version
+          mkdir -p ~/.local/share/undetected_chromedriver
+          echo "$MAJOR" > ~/.local/share/undetected_chromedriver/VERSION
+          
+          echo "Chrome major version: $MAJOR"
+          google-chrome --version
+      
+      - name: Create logs directory
+        run: mkdir -p logs
+      
+      - name: Run links loader → Supabase (Batch 1)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python -m pipeline.acquisition.links_loader --start 1 --end 100
+        continue-on-error: true
+      
+      - name: Run links loader → Supabase (Batch 2)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python -m pipeline.acquisition.links_loader --start 101 --end 200
+        continue-on-error: true
+      
+      - name: Upload links logs
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: links-loader-logs
+          path: logs/
+          retention-days: 7  
 
   # ==============================================================
   # 2. Bronze-scraping → Supabase
   # ==============================================================
   parse-bronze:
-    #needs: collect-links
+    needs: collect-links
     runs-on: ubuntu-latest
     timeout-minutes: 180  # 3 hours for bronze parsing
     
@@ -183,4 +456,67 @@ jobs:
           else
             echo "⚠️ Log file not found"
           fi
+
+  # ==============================================================
+  # 3. Silver → Supabase
+  # ==============================================================
+  silver:
+    needs: parse-bronze
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - uses: actions/checkout@v6
+      
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      
+      - name: Cache pip dependencies
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      
+      - run: pip install -r requirements.txt
+      
+      - name: Silver → Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python -m scripts.run_silver
+
+  # ==============================================================
+  # 4. Gold → Supabase
+  # ==============================================================
+  gold:
+    needs: silver
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - uses: actions/checkout@v6
+      
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      
+      - name: Cache pip dependencies
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      
+      - run: pip install -r requirements.txt
+      
+      - name: Gold → Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python -m scripts.run_gold
+
 
