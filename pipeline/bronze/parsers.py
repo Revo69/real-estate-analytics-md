@@ -228,7 +228,7 @@ def parse_features(url: str, driver=None) -> dict:
         
         if not page_ready:
             try:
-                html_preview = driver.page_source[:2000]
+                html_preview = driver.page_source[:5000]
                 logging.warning(f"   📄 Title: '{driver.title}', URL: {driver.current_url}")
                 logging.warning(f"   📋 HTML preview:\n{html_preview}")
             except Exception as dump_err:
