@@ -227,7 +227,16 @@ def parse_features(url: str, driver=None) -> dict:
                 continue
         
         if not page_ready:
-            logging.warning(f"   ⚠️ JS content not rendered: {url}")
+            try:
+                dump_path = f"logs/failed_{url.split('/')[-1]}.html"
+                with open(dump_path, "w", encoding="utf-8") as f:
+                    f.write(driver.page_source)
+                logging.warning(f"   ⚠️ JS content not rendered")
+                logging.warning(f"   📄 Title: '{driver.title}', URL: {driver.current_url}")
+                logging.warning(f"   💾 HTML saved: {dump_path}")
+            except Exception as dump_err:
+                logging.warning(f"   ⚠️ Could not dump: {dump_err}")
+            
             return {"url": url, "status": "failed"}
         
         soup = BeautifulSoup(driver.page_source, "html.parser")
