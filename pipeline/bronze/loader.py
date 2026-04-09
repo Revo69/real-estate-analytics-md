@@ -5,7 +5,6 @@ import uuid
 import argparse
 from dotenv import load_dotenv
 
-#from .parsers import parse_features
 from .parsers import parse_features
 
 from supabase import create_client, Client
@@ -15,7 +14,6 @@ import time
 import random
 import shutil
 
-# Load environment variables
 load_dotenv()
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
@@ -29,7 +27,6 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Logging setup
 LOG_PATH = os.path.join("logs", "bronze_loader.log")
 os.makedirs("logs", exist_ok=True)
 
