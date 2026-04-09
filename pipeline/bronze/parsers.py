@@ -17,6 +17,21 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
 }
 
+def set_old_version_cookie(driver):
+    """Принудительно устанавливает старую версию сайта"""
+    try:
+        driver.execute_cdp_cmd("Network.setCookie", {
+            "name": "designVersion",
+            "value": "v1",
+            "domain": ".999.md",
+            "path": "/",
+            "secure": False,
+            "httpOnly": False
+        })
+        logging.info("   🍪 Cookie designVersion=v1 set")
+    except Exception as e:
+        logging.debug(f"   Cookie set error: {e}")
+
 def human_like_interaction(driver):
     """Симулирует человеческое поведение на странице"""
     try:
@@ -203,12 +218,19 @@ def parse_features(url: str, driver=None) -> dict:
     try:
         driver.get(url)
 
-        # Сначала короткая пауза как у реального пользователя
-        time.sleep(random.uniform(1.0, 2.0))
+        # Устанавливаем куки старой версии
+        set_old_version_cookie(driver)
         
-        # Симулируем поведение
-        human_like_interaction(driver)        
+        # Перезагружаем страницу с новым куки
+        driver.get(url)
         
+        time.sleep(random.uniform(2.0, 3.0))
+        human_like_interaction(driver)
+        
+        # Проверяем что получили старую версию
+        if "rd-visa-logo" in driver.page_source:
+            logging.warning(f"   ⚠️ Still new version after cookie set: {url}")
+
         # Ждём клиентский контент — блок характеристик или цена
         page_ready = False
         for selector in [
