@@ -165,29 +165,41 @@ def extract_all_prices(soup: BeautifulSoup) -> Dict[str, Optional[int]]:
             for currency in ["mdl", "eur", "usd"]:
                 if result[currency] is None:
                     result[currency] = converted[currency]
-    
+                    
     return result
 
-def parse_features(url: str, driver=None) -> dict:
 
+def parse_features(url: str, driver=None) -> dict:
     try:
         driver.get(url)
-        
-        # Временно: дамп HTML для диагностики
-        import hashlib, os
-        url_hash = hashlib.md5(url.encode()).hexdigest()[:8]
-        dump_path = f"logs/debug_{url_hash}.html"
-        if not os.path.exists(dump_path):
-            with open(dump_path, "w", encoding="utf-8") as f:
-                f.write(driver.page_source)
-            logging.info(f"   📄 HTML dumped to {dump_path}")
-        
+        # Ждём появления блока характеристик
+        try:
+            WebDriverWait(driver, 20).until(
+                EC.presence_of_element_located(
+                    (By.CSS_SELECTOR, "div.styles_features__left__ON_QP")
+                )
+            )
+        except:
+            logging.warning(f"   ⚠️ Features block timeout: {url}")
+       
         soup = BeautifulSoup(driver.page_source, "html.parser")
 
         features = {"url": url, "status": "success"}
 
         features.update(extract_attr(soup, 'meta[property="product:retailer_item_id"]', "content", "ad_id"))
-        features.update(extract_text(soup, "p.styles_date__voWnk", "publication_date", remove_prefix="Дата публикации:"))
+        #features.update(extract_text(soup, "p.styles_date__voWnk", "publication_date", remove_prefix="Дата публикации:"))
+        date_tag = soup.select_one("p.styles_date__voWnk")
+        if date_tag:
+            date_text = date_tag.get_text(strip=True)
+            # Убираем любой из возможных префиксов
+            for prefix in ["Дата публикации:", "Дата обновления:"]:
+                if date_text.startswith(prefix):
+                    date_text = date_text[len(prefix):].strip()
+                    break
+            features["publication_date"] = date_text
+        else:
+            features["publication_date"] = None
+        
         features.update(extract_text(soup, "a.styles_owner__login__VKE71", "user_login"))
         features.update(extract_text(soup, "p.styles_type___J9Dy", "deal_type", remove_prefix="Тип:"))
         features.update(extract_text(soup, "div.styles_region__7lsaj", "region", remove_prefix="Регион:"))
