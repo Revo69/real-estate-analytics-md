@@ -194,7 +194,6 @@ def parse_features(url: str, driver=None) -> dict:
         
         driver.get(url)
 
-        # Устанавливаем куки старой версии
         set_old_version_cookie(driver)
         
         # Перезагружаем страницу с новым куки
@@ -202,11 +201,9 @@ def parse_features(url: str, driver=None) -> dict:
         
         time.sleep(random.uniform(2.0, 3.0))
         
-        # Проверяем что получили старую версию
         if "rd-visa-logo" in driver.page_source:
             logging.warning(f"   ⚠️ Still new version after cookie set: {url}")
 
-        # Ждём клиентский контент — блок характеристик или цена
         page_ready = False
         for selector in [
             "div.styles_features__left__ON_QP",  # блок характеристик
