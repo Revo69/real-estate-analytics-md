@@ -169,9 +169,19 @@ def extract_all_prices(soup: BeautifulSoup) -> Dict[str, Optional[int]]:
     return result
 
 def parse_features(url: str, driver=None) -> dict:
-    
+
     try:
         driver.get(url)
+        
+        # Временно: дамп HTML для диагностики
+        import hashlib, os
+        url_hash = hashlib.md5(url.encode()).hexdigest()[:8]
+        dump_path = f"logs/debug_{url_hash}.html"
+        if not os.path.exists(dump_path):
+            with open(dump_path, "w", encoding="utf-8") as f:
+                f.write(driver.page_source)
+            logging.info(f"   📄 HTML dumped to {dump_path}")
+        
         soup = BeautifulSoup(driver.page_source, "html.parser")
 
         features = {"url": url, "status": "success"}
