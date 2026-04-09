@@ -20,13 +20,11 @@ HEADERS = {
 def set_old_version_cookie(driver):
     """Принудительно устанавливает старую версию сайта"""
     try:
-        driver.execute_cdp_cmd("Network.setCookie", {
+        driver.add_cookie({
             "name": "designVersion",
             "value": "v1",
             "domain": ".999.md",
-            "path": "/",
-            "secure": False,
-            "httpOnly": False
+            "path": "/"
         })
         logging.info("   🍪 Cookie designVersion=v1 set")
     except Exception as e:
@@ -216,6 +214,11 @@ def extract_all_prices(soup: BeautifulSoup) -> Dict[str, Optional[int]]:
 
 def parse_features(url: str, driver=None) -> dict:
     try:
+        current_url = driver.current_url
+        if "999.md" not in current_url:
+            driver.get("https://999.md/ru")
+            time.sleep(1)
+        
         driver.get(url)
 
         # Устанавливаем куки старой версии
