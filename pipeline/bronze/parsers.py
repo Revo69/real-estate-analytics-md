@@ -9,11 +9,40 @@ from bs4 import BeautifulSoup
 from .mappings import MAIN_FEATURES_MAP, ADDITIONAL_FEATURES_MAP
 from typing import Dict, Optional
 from utils.rates import get_current_rates, convert_currency
-
+from selenium.webdriver.common.action_chains import ActionChains
+import random
+import time
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
 }
+
+def human_like_interaction(driver):
+    """Симулирует человеческое поведение на странице"""
+    try:
+        actions = ActionChains(driver)
+        
+        # Случайные движения мыши
+        for _ in range(random.randint(2, 4)):
+            x = random.randint(100, 800)
+            y = random.randint(100, 600)
+            actions.move_by_offset(x, y)
+            actions.pause(random.uniform(0.1, 0.3))
+        
+        actions.perform()
+        
+        # Случайный скролл
+        scroll_amount = random.randint(200, 500)
+        driver.execute_script(f"window.scrollBy(0, {scroll_amount});")
+        time.sleep(random.uniform(0.5, 1.0))
+        
+        # Скролл обратно вверх
+        driver.execute_script("window.scrollBy(0, -100);")
+        time.sleep(random.uniform(0.3, 0.6))
+        
+    except Exception as e:
+        logging.debug(f"   Human interaction error (non-critical): {e}")
+
 
 def extract_list_features(soup, block_selector, key_selector, value_selector, key_map, block_name):
     result = {block_name: {}}
@@ -173,6 +202,12 @@ def extract_all_prices(soup: BeautifulSoup) -> Dict[str, Optional[int]]:
 def parse_features(url: str, driver=None) -> dict:
     try:
         driver.get(url)
+
+        # Сначала короткая пауза как у реального пользователя
+        time.sleep(random.uniform(1.0, 2.0))
+        
+        # Симулируем поведение
+        human_like_interaction(driver)        
         
         # Ждём клиентский контент — блок характеристик или цена
         page_ready = False
