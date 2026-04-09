@@ -8,7 +8,7 @@ import logging
 from pipeline.acquisition import links_loader
 import os
 def main():
-    # ensure logs/ directory exists
+
     os.makedirs("logs", exist_ok=True)
 
     logging.basicConfig(
