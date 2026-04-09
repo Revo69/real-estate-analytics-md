@@ -30,33 +30,6 @@ def set_old_version_cookie(driver):
     except Exception as e:
         logging.debug(f"   Cookie set error: {e}")
 
-def human_like_interaction(driver):
-    """Симулирует человеческое поведение на странице"""
-    try:
-        actions = ActionChains(driver)
-        
-        # Случайные движения мыши
-        for _ in range(random.randint(2, 4)):
-            x = random.randint(100, 800)
-            y = random.randint(100, 600)
-            actions.move_by_offset(x, y)
-            actions.pause(random.uniform(0.1, 0.3))
-        
-        actions.perform()
-        
-        # Случайный скролл
-        scroll_amount = random.randint(200, 500)
-        driver.execute_script(f"window.scrollBy(0, {scroll_amount});")
-        time.sleep(random.uniform(0.5, 1.0))
-        
-        # Скролл обратно вверх
-        driver.execute_script("window.scrollBy(0, -100);")
-        time.sleep(random.uniform(0.3, 0.6))
-        
-    except Exception as e:
-        logging.debug(f"   Human interaction error (non-critical): {e}")
-
-
 def extract_list_features(soup, block_selector, key_selector, value_selector, key_map, block_name):
     result = {block_name: {}}
     unknown_keys = []
@@ -228,7 +201,6 @@ def parse_features(url: str, driver=None) -> dict:
         driver.get(url)
         
         time.sleep(random.uniform(2.0, 3.0))
-        human_like_interaction(driver)
         
         # Проверяем что получили старую версию
         if "rd-visa-logo" in driver.page_source:
