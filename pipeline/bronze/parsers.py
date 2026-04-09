@@ -18,7 +18,6 @@ HEADERS = {
 }
 
 def set_old_version_cookie(driver):
-    """Принудительно устанавливает старую версию сайта"""
     try:
         driver.add_cookie({
             "name": "designVersion",
@@ -239,7 +238,6 @@ def parse_features(url: str, driver=None) -> dict:
         date_tag = soup.select_one("p.styles_date__voWnk")
         if date_tag:
             date_text = date_tag.get_text(strip=True)
-            # Убираем любой из возможных префиксов
             for prefix in ["Дата публикации:", "Дата обновления:"]:
                 if date_text.startswith(prefix):
                     date_text = date_text[len(prefix):].strip()
