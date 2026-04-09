@@ -228,12 +228,9 @@ def parse_features(url: str, driver=None) -> dict:
         
         if not page_ready:
             try:
-                dump_path = f"logs/failed_{url.split('/')[-1]}.html"
-                with open(dump_path, "w", encoding="utf-8") as f:
-                    f.write(driver.page_source)
-                logging.warning(f"   ⚠️ JS content not rendered")
+                html_preview = driver.page_source[:2000]
                 logging.warning(f"   📄 Title: '{driver.title}', URL: {driver.current_url}")
-                logging.warning(f"   💾 HTML saved: {dump_path}")
+                logging.warning(f"   📋 HTML preview:\n{html_preview}")
             except Exception as dump_err:
                 logging.warning(f"   ⚠️ Could not dump: {dump_err}")
             
