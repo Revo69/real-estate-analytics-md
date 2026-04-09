@@ -96,7 +96,6 @@ def update_link_status(url: str, status: str, current_attempts: int) -> bool:
         
         logging.info(f"   Update executed, checking result...")
         
-        # Check result
         if result.data and len(result.data) > 0:
             logging.info(f"✅ Updated {len(result.data)} record(s): {url} → status: {status}, attempts: {current_attempts + 1}")
             return True
@@ -104,7 +103,6 @@ def update_link_status(url: str, status: str, current_attempts: int) -> bool:
             logging.error(f"❌ Update returned no data for URL: {url}")
             logging.error(f"   Response: {result}")
             
-            # Verify again after update
             verify = supabase.table("raw_links").select("status, attempts, updated_at").eq("url", url).execute()
             logging.error(f"   Current record state: {verify.data}")
             return False
