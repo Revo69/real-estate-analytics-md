@@ -173,16 +173,28 @@ def extract_all_prices(soup: BeautifulSoup) -> Dict[str, Optional[int]]:
 def parse_features(url: str, driver=None) -> dict:
     try:
         driver.get(url)
-        # Ждём появления блока характеристик
-        try:
-            WebDriverWait(driver, 20).until(
-                EC.presence_of_element_located(
-                    (By.CSS_SELECTOR, "div.styles_features__left__ON_QP")
+        
+        # Ждём клиентский контент — блок характеристик или цена
+        page_ready = False
+        for selector in [
+            "div.styles_features__left__ON_QP",  # блок характеристик
+            "div.styles_footer__sKQxZ",           # блок с ценой и регионом  
+            "a.styles_owner__login__VKE71",        # логин владельца
+        ]:
+            try:
+                WebDriverWait(driver, 30).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, selector))
                 )
-            )
-        except:
-            logging.warning(f"   ⚠️ Features block timeout: {url}")
-       
+                logging.info(f"   ✅ Page ready, found: {selector}")
+                page_ready = True
+                break
+            except:
+                continue
+        
+        if not page_ready:
+            logging.warning(f"   ⚠️ JS content not rendered: {url}")
+            return {"url": url, "status": "failed"}
+        
         soup = BeautifulSoup(driver.page_source, "html.parser")
 
         features = {"url": url, "status": "success"}
