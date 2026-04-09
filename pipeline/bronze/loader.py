@@ -306,7 +306,6 @@ def main(start: int, end: int):
             logging.info(f"🔄 [{idx}/{len(rows)}] Processing: {url}")
             logging.info(f"   Current attempts: {current_attempts}")
             
-            # Skip URLs that have failed too many times
             if current_attempts >= 3:
                 logging.warning(f"   ⏭️ Skipping URL with {current_attempts} attempts")
                 update_link_status(url, "max_attempts_reached", current_attempts)
@@ -354,11 +353,9 @@ def main(start: int, end: int):
                 logging.error(traceback.format_exc())
                 record = {"status": "failed", "url": url}
             
-            # Determine the actual status based on parsing result
             parse_status = record.get("status", "failed")
             logging.info(f"   Parse status: {parse_status}")
             
-            # Only save if parsing was successful
             if parse_status == "success":
                 logging.info(f"   💾 Attempting to save to bronze_estate...")
                 saved = save_estate(record)
@@ -378,7 +375,6 @@ def main(start: int, end: int):
                     update_link_status(url, "save_failed", current_attempts)
                     failed_count += 1
             else:
-                # Parsing failed
                 status_map = {
                     "timeout": "parse_timeout",
                     "webdriver_error": "parse_error",
