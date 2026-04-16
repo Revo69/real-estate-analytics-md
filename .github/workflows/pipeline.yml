@@ -10,8 +10,7 @@ permissions:
   actions: write
 
 jobs:
-
- collect-links:
+  collect-links:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     
