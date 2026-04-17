@@ -38,6 +38,18 @@ logging.basicConfig(
     ]
 )
 
+def set_old_version_cookie(driver):
+    try:
+        driver.add_cookie({
+            "name": "designVersion",
+            "value": "v1",
+            "domain": ".999.md",
+            "path": "/"
+        })
+        logging.info("   🍪 Cookie designVersion=v1 set")
+    except Exception as e:
+        logging.debug(f"   Cookie set error: {e}")
+
 BASE_URL = (
     "https://999.md/ru/list/real-estate/apartments-and-rooms"
     "?view_type=short&page={}&appl=1&ef=16,9441,32,30,2307"
@@ -83,7 +95,21 @@ def fetch_links_from_page(page: int) -> list[str]:
             logging.info(f"Page {page}, attempt {attempt}: {url}")
             try:
                 driver.set_page_load_timeout(60)
+                
                 driver.get(url)
+        
+                set_old_version_cookie(driver)
+                
+                # Перезагружаем страницу с новым куки
+                driver.get(url)
+                
+                time.sleep(random.uniform(2.0, 3.0))
+                
+                if "rd-visa-logo" in driver.page_source:
+                    logging.warning(f"   ⚠️ Still new version after cookie set: {url}")
+
+
+            
             except (TimeoutException, WebDriverException) as e:
                 logging.warning(f"Page {page} failed to load (attempt {attempt}): {e}")
                 continue
