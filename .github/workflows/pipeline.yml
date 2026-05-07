@@ -16,7 +16,7 @@ jobs:
   # 3. Silver → Supabase
   # ==============================================================
   silver:
-    needs: parse-bronze
+    #needs: parse-bronze
     runs-on: ubuntu-latest
     timeout-minutes: 30
     
