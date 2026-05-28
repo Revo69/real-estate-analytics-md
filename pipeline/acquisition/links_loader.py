@@ -46,7 +46,7 @@ logging.basicConfig(
 AD_HREF_RE = re.compile(r"^/ru/\d+")
 
 BASE_URL = (
-    "https://999.md/ru/list/real-estate/apartments-and-rooms?o_16_1=776,903,912&page={}"
+    "https://999.md/ru/list/real-estate/apartments-and-rooms?page={}&o_16_1=776,903,912"
 )
 
 MAX_WORKERS = int(os.getenv("MAX_WORKERS", 1))
