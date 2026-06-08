@@ -68,14 +68,7 @@ jobs:
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: python -m pipeline.acquisition.links_loader --start 1 --end 100
         continue-on-error: true
-      
-      - name: Run links loader → Supabase (Batch 2)
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        run: python -m pipeline.acquisition.links_loader --start 101 --end 200
-        continue-on-error: true
-      
+
       - name: Upload links logs
         if: always()
         uses: actions/upload-artifact@v6
