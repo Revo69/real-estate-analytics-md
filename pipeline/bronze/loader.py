@@ -436,7 +436,7 @@ def main(start: int, end: int):
                 )
 
             # Rate limiting - random delay between requests
-            delay = random.uniform(1, 2)  # 1-2 seconds
+            delay = random.uniform(2, 3)  # 2-3 seconds
             logging.info(f"   ⏳ Waiting {delay:.1f}s before next request...")
             time.sleep(delay)
 
