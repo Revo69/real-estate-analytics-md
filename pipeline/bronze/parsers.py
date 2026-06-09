@@ -275,7 +275,7 @@ def parse_features(url: str, driver=None) -> dict:
 
         # ── Region / address ──────────────────────────────────────────────
         # New design: "Бельцы мун., Бельцы, Центр, str. Sennaia, 2"
-        features.update(extract_text(soup, "div.styles_map__title__UgISm", "region"))
+        features.update(extract_text(soup, "div.styles_map__address__wnNuo", "region"))
 
         # ── Description ───────────────────────────────────────────────────
         features.update(
