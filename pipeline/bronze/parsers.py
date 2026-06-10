@@ -207,6 +207,22 @@ def extract_all_prices(soup: BeautifulSoup) -> Dict[str, Optional[int]]:
     return result
 
 
+def extract_region(soup) -> dict:
+    # title
+    title_tag = soup.select_one("div.styles_map__title__UgISm")
+    title_text = title_tag.get_text(strip=True) if title_tag else ""
+
+    if title_text and title_text != "Расположение":
+        return {"region": title_text}
+
+    # address
+    address_tag = soup.select_one("div.styles_map__address__wnNuo")
+    if address_tag:
+        return {"region": address_tag.get_text(strip=True)}
+
+    return {"region": None}
+
+
 # ──────────────────────────────────────────────
 # Main parser
 # ──────────────────────────────────────────────
@@ -275,7 +291,8 @@ def parse_features(url: str, driver=None) -> dict:
 
         # ── Region / address ──────────────────────────────────────────────
         # New design: "Бельцы мун., Бельцы, Центр, str. Sennaia, 2"
-        features.update(extract_text(soup, "div.styles_map__address__wnNuo", "region"))
+        #features.update(extract_text(soup, "div.styles_map__address__wnNuo", "region"))
+        features.update(extract_region(soup))
 
         # ── Description ───────────────────────────────────────────────────
         features.update(
