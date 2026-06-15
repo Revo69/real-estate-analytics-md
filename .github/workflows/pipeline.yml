@@ -10,86 +10,13 @@ permissions:
   actions: write
 
 jobs:
-  collect-links:
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    
-    steps:
-      - uses: actions/checkout@v6
-      
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.11'
-      
-      - name: Cache pip dependencies
-        uses: actions/cache@v5
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-      
-      - name: Install dependencies
-        run: |
-          pip install --upgrade pip
-          pip install -r requirements.txt
-      
-      - name: Install latest stable Chrome + auto-matched driver
-        uses: browser-actions/setup-chrome@v2
-        with:
-          chrome-version: stable
-      
-      - name: Clean & force correct undetected-chromedriver version
-        run: |
-          echo "🔧 Setting up Chrome Driver for links collection..."
-          
-          # Clean all caches
-          rm -rf ~/.local/share/undetected_chromedriver
-          rm -rf /tmp/undetected_chromedriver
-          rm -rf /tmp/.com.google.Chrome.*
-          
-          # Get Chrome major version
-          MAJOR=$(google-chrome --version | grep -oE '[0-9]+' | head -1)
-          
-          # Create cache with version
-          mkdir -p ~/.local/share/undetected_chromedriver
-          echo "$MAJOR" > ~/.local/share/undetected_chromedriver/VERSION
-          
-          echo "Chrome major version: $MAJOR"
-          google-chrome --version
-      
-      - name: Create logs directory
-        run: mkdir -p logs
-      
-      - name: Run links loader → Supabase (Batch 1)
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        run: python -m pipeline.acquisition.links_loader --start 1 --end 100
-        continue-on-error: true
-
-      - name: Run links loader → Supabase (Batch 2)
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        run: python -m pipeline.acquisition.links_loader --start 101 --end 200
-        continue-on-error: true        
-
-      - name: Upload links logs
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: links-loader-logs
-          path: logs/
-          retention-days: 7   
   # ==============================================================
   # 2. Bronze-scraping → Supabase
   # ==============================================================
   parse-bronze:
-    needs: collect-links
+    #needs: collect-links
     runs-on: ubuntu-latest
-    timeout-minutes: 180  # 3 hours for bronze parsing
+    timeout-minutes: 360  # 3 hours for bronze parsing
     
     steps:
       - uses: actions/checkout@v6
@@ -253,64 +180,3 @@ jobs:
           else
             echo "⚠️ Log file not found"
           fi
-  # ==============================================================
-  # 3. Silver → Supabase
-  # ==============================================================
-  silver:
-    needs: parse-bronze
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    
-    steps:
-      - uses: actions/checkout@v6
-      
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.11'
-      
-      - name: Cache pip dependencies
-        uses: actions/cache@v5
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-      
-      - run: pip install -r requirements.txt
-      
-      - name: Silver → Supabase
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        run: python -m scripts.run_silver
-
-  # ==============================================================
-  # 4. Gold → Supabase
-  # ==============================================================
-  gold:
-    needs: silver
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    
-    steps:
-      - uses: actions/checkout@v6
-      
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.11'
-      
-      - name: Cache pip dependencies
-        uses: actions/cache@v5
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-      
-      - run: pip install -r requirements.txt
-      
-      - name: Gold → Supabase
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        run: python -m scripts.run_gold
