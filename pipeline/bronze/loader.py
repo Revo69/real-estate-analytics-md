@@ -300,7 +300,7 @@ def main(start: int, end: int):
         resp = (
             supabase.table("raw_links")
             .select("url, attempts")
-            .in_("status", ["pending", "parse_failed"])
+            .in_("status", ["pending"])
             .range(offset, offset + limit - 1)
             .execute()
         )
@@ -436,7 +436,7 @@ def main(start: int, end: int):
                 )
 
             # Rate limiting - random delay between requests
-            delay = random.uniform(2, 3)  # 2-3 seconds
+            delay = random.uniform(1, 2)  # 1-2 seconds
             logging.info(f"   ⏳ Waiting {delay:.1f}s before next request...")
             time.sleep(delay)
 
