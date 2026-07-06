@@ -66,7 +66,7 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        run: python -m pipeline.acquisition.links_loader --start 1 --end 50
+        run: python -m pipeline.acquisition.links_loader --start 1 --end 100
         continue-on-error: true
 
       - name: Upload links logs
