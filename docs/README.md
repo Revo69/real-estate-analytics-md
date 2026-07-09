@@ -145,22 +145,12 @@ Or let **GitHub Actions** orchestrate it automatically via
 
 ---
 
-## 📊 Notebooks
-
-- `price_analysis.ipynb` — explore price trends by region and currency  
-- `region_distribution.ipynb` — visualize listing density across districts  
-- `feature_quality_check.ipynb` — validate completeness and consistency of parsed features  
-- `ab_test_validation.ipynb` — statistical validation of experimental changes (e.g. publisher module A/B tests)  
-
----
-
 ## 📁 Data Storage
 
 - `raw_links` — deduplicated queue of listing URLs for acquisition stored in **Supabase/Postgres** 
 - `bronze_estate` — parsed listings table with structured fields and embedded JSON (prices, features)  
 - `silver_estate` — normalized records stored in **Supabase/Postgres** for downstream analytics
 - `gold_estate_current` — curated, aggregated, and cleaned records stored in **Supabase/Postgres** representing the latest state of the real estate market.  
-- `logs/` — pipeline execution logs, uploaded as artifacts in CI/CD  
 
 ---
 
