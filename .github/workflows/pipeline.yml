@@ -80,7 +80,17 @@ jobs:
         with:
           name: links-loader-logs
           path: logs/
-          retention-days: 7   
+          retention-days: 7
+
+      - name: Validate links collection result
+        if: always()
+        run: |
+          if [ "${{ steps.collect_links.outcome }}" != "success" ]; then
+            echo "❌ Links collection failed"
+            exit 1
+          fi
+      
+          echo "✅ Links collection completed successfully"
 
   # ==============================================================
   # 2. Bronze-scraping → Supabase
