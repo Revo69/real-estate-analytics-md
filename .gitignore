@@ -18,3 +18,4 @@ storage/snapshots/
 
 # VSCode
 .vscode/
+node_modules/
