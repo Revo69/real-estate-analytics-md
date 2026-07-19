@@ -156,12 +156,12 @@ jobs:
       - name: Create logs directory
         run: mkdir -p logs
       
-      - name: Run bronze loader → Supabase (Batch 1)
+      - name: Process next 500 pending links — iteration 1
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
-          echo "🚀 Starting bronze batch 1 (0-500)..."
+          echo "🚀 Processing next 500 pending links — iteration 1..."
           python -m pipeline.bronze.loader --start 0 --end 500
         continue-on-error: true
         timeout-minutes: 120
@@ -171,12 +171,12 @@ jobs:
           echo "⏳ Waiting 30s between batches..."
           sleep 30
       
-      - name: Run bronze loader → Supabase (Batch 2)
+      - name: Process next 500 pending links — iteration 2
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
-          echo "🚀 Starting bronze batch 2 (0-500)..."
+          echo "🚀 Processing next 500 pending links — iteration 2..."
           python -m pipeline.bronze.loader --start 0 --end 500
         continue-on-error: true
         timeout-minutes: 120
@@ -186,27 +186,12 @@ jobs:
           echo "⏳ Waiting 30s between batches..."
           sleep 30
 
-      - name: Run bronze loader → Supabase (Batch 3)
+      - name: Process next 500 pending links — iteration 3
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
-          echo "🚀 Starting bronze batch 3 (0-500)..."
-          python -m pipeline.bronze.loader --start 0 --end 500
-        continue-on-error: true
-        timeout-minutes: 120
-      
-      - name: Sleep between batches
-        run: |
-          echo "⏳ Waiting 30s between batches..."
-          sleep 30
-
-      - name: Run bronze loader → Supabase (Batch 4)
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        run: |
-          echo "🚀 Starting bronze batch 4 (0-500)..."
+          echo "🚀 Processing next 500 pending links — iteration 3..."
           python -m pipeline.bronze.loader --start 0 --end 500
         continue-on-error: true
         timeout-minutes: 120
@@ -216,12 +201,12 @@ jobs:
           echo "⏳ Waiting 30s between batches..."
           sleep 30
 
-      - name: Run bronze loader → Supabase (Batch 5)
+      - name: Process next 500 pending links — iteration 4
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
-          echo "🚀 Starting bronze batch 5 (0-500)..."
+          echo "🚀 Processing next 500 pending links — iteration 4..."
           python -m pipeline.bronze.loader --start 0 --end 500
         continue-on-error: true
         timeout-minutes: 120
@@ -231,12 +216,27 @@ jobs:
           echo "⏳ Waiting 30s between batches..."
           sleep 30
 
-      - name: Run bronze loader → Supabase (Batch 6)
+      - name: Process next 500 pending links — iteration 5
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
-          echo "🚀 Starting bronze batch 6 (0-500)..."
+          echo "🚀 Processing next 500 pending links — iteration 5..."
+          python -m pipeline.bronze.loader --start 0 --end 500
+        continue-on-error: true
+        timeout-minutes: 120
+      
+      - name: Sleep between batches
+        run: |
+          echo "⏳ Waiting 30s between batches..."
+          sleep 30
+
+      - name: Process next 500 pending links — iteration 6
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          echo "🚀 Processing next 500 pending links — iteration 6..."
           python -m pipeline.bronze.loader --start 0 --end 500
         continue-on-error: true
         timeout-minutes: 120
