@@ -2,7 +2,7 @@ name: Real Estate Pipeline
 
 on:
   schedule:
-    - cron: '0 1 * * *'   # every day at 03:00 UTC
+    - cron: "0 1 * * *" # every day at 03:00 UTC
   workflow_dispatch:
 
 concurrency:
@@ -17,15 +17,15 @@ jobs:
   collect-links:
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    
+
     steps:
       - uses: actions/checkout@v6
-      
+
       - name: Set up Python 3.11
         uses: actions/setup-python@v6
         with:
-          python-version: '3.11'
-      
+          python-version: "3.11"
+
       - name: Cache pip dependencies
         uses: actions/cache@v5
         with:
@@ -33,39 +33,39 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
-      
+
       - name: Install dependencies
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
-      
+
       - name: Install latest stable Chrome + auto-matched driver
         uses: browser-actions/setup-chrome@v2
         with:
           chrome-version: stable
-      
+
       - name: Clean & force correct undetected-chromedriver version
         run: |
           echo "🔧 Setting up Chrome Driver for links collection..."
-          
+
           # Clean all caches
           rm -rf ~/.local/share/undetected_chromedriver
           rm -rf /tmp/undetected_chromedriver
           rm -rf /tmp/.com.google.Chrome.*
-          
+
           # Get Chrome major version
           MAJOR=$(google-chrome --version | grep -oE '[0-9]+' | head -1)
-          
+
           # Create cache with version
           mkdir -p ~/.local/share/undetected_chromedriver
           echo "$MAJOR" > ~/.local/share/undetected_chromedriver/VERSION
-          
+
           echo "Chrome major version: $MAJOR"
           google-chrome --version
-      
+
       - name: Create logs directory
         run: mkdir -p logs
-      
+
       - name: Scan listing pages 1-50 and collect links
         id: collect_links
         env:
@@ -89,7 +89,7 @@ jobs:
             echo "❌ Links collection failed"
             exit 1
           fi
-      
+
           echo "✅ Links collection completed successfully"
 
   # ==============================================================
@@ -98,16 +98,16 @@ jobs:
   parse-bronze:
     needs: collect-links
     runs-on: ubuntu-latest
-    timeout-minutes: 360  # 6 hours for bronze parsing
-    
+    timeout-minutes: 360 # 6 hours for bronze parsing
+
     steps:
       - uses: actions/checkout@v6
-      
+
       - name: Set up Python 3.11
         uses: actions/setup-python@v6
         with:
-          python-version: '3.11'
-      
+          python-version: "3.11"
+
       - name: Cache pip dependencies
         uses: actions/cache@v5
         with:
@@ -115,58 +115,58 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
-      
+
       - name: Install dependencies
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
-      
+
       - name: Install Chrome + force correct driver
         uses: browser-actions/setup-chrome@v2
         with:
           chrome-version: stable
-      
+
       - name: Setup Chrome Driver with version matching
         run: |
           echo "🔧 Setting up Chrome Driver for bronze parsing..."
-          
+
           # Get Chrome version details
           CHROME_VERSION=$(google-chrome --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+')
           CHROME_MAJOR=$(echo $CHROME_VERSION | cut -d. -f1)
-          
+
           echo "Chrome version: $CHROME_VERSION"
           echo "Chrome major: $CHROME_MAJOR"
-          
+
           # Complete cleanup
           rm -rf ~/.local/share/undetected_chromedriver
           rm -rf /tmp/undetected_chromedriver
           rm -rf /tmp/.com.google.Chrome.*
-          
+
           # Create cache directory with version
           mkdir -p ~/.local/share/undetected_chromedriver
           echo "$CHROME_MAJOR" > ~/.local/share/undetected_chromedriver/VERSION
-          
+
           # Verify
           which google-chrome
           google-chrome --version
-          
+
           echo "✅ Chrome setup complete"
-      
+
       - name: Configure system for long-running connections
         run: |
           echo "🔧 Configuring system timeouts..."
-          
+
           # Increase TCP keepalive for long connections (fixes DevTools timeout)
           echo "net.ipv4.tcp_keepalive_time = 300" | sudo tee -a /etc/sysctl.conf
           echo "net.ipv4.tcp_keepalive_intvl = 60" | sudo tee -a /etc/sysctl.conf
           echo "net.ipv4.tcp_keepalive_probes = 5" | sudo tee -a /etc/sysctl.conf
           sudo sysctl -p
-          
+
           echo "✅ System timeouts configured"
-      
+
       - name: Create logs directory
         run: mkdir -p logs
-      
+
       - name: Process next 500 pending links — iteration 1
         id: bronze_1
         env:
@@ -177,12 +177,12 @@ jobs:
           python -m pipeline.bronze.loader --start 0 --end 500
         continue-on-error: true
         timeout-minutes: 120
-      
+
       - name: Sleep between batches
         run: |
           echo "⏳ Waiting 30s between batches..."
           sleep 30
-      
+
       - name: Process next 500 pending links — iteration 2
         id: bronze_2
         env:
@@ -209,7 +209,7 @@ jobs:
           python -m pipeline.bronze.loader --start 0 --end 500
         continue-on-error: true
         timeout-minutes: 120
-      
+
       - name: Sleep between batches
         run: |
           echo "⏳ Waiting 30s between batches..."
@@ -225,7 +225,7 @@ jobs:
           python -m pipeline.bronze.loader --start 0 --end 500
         continue-on-error: true
         timeout-minutes: 120
-      
+
       - name: Sleep between batches
         run: |
           echo "⏳ Waiting 30s between batches..."
@@ -241,7 +241,7 @@ jobs:
           python -m pipeline.bronze.loader --start 0 --end 500
         continue-on-error: true
         timeout-minutes: 120
-      
+
       - name: Sleep between batches
         run: |
           echo "⏳ Waiting 30s between batches..."
@@ -265,12 +265,12 @@ jobs:
           name: bronze-loader-logs
           path: logs/
           retention-days: 7
-      
+
       - name: Processing statistics
         if: always()
         run: |
           echo "📊 Analyzing processing results..."
-          
+
           if [ -f logs/bronze_loader.log ]; then
             echo ""
             echo "=== Last 100 lines of log ==="
@@ -298,42 +298,42 @@ jobs:
         if: always()
         run: |
           failed=0
-      
+
           if [ "${{ steps.bronze_1.outcome }}" != "success" ]; then
             echo "❌ Bronze iteration 1 failed"
             failed=1
           fi
-      
+
           if [ "${{ steps.bronze_2.outcome }}" != "success" ]; then
             echo "❌ Bronze iteration 2 failed"
             failed=1
           fi
-      
+
           if [ "${{ steps.bronze_3.outcome }}" != "success" ]; then
             echo "❌ Bronze iteration 3 failed"
             failed=1
           fi
-      
+
           if [ "${{ steps.bronze_4.outcome }}" != "success" ]; then
             echo "❌ Bronze iteration 4 failed"
             failed=1
           fi
-      
+
           if [ "${{ steps.bronze_5.outcome }}" != "success" ]; then
             echo "❌ Bronze iteration 5 failed"
             failed=1
           fi
-      
+
           if [ "${{ steps.bronze_6.outcome }}" != "success" ]; then
             echo "❌ Bronze iteration 6 failed"
             failed=1
           fi
-      
+
           if [ "$failed" -eq 1 ]; then
             echo "❌ One or more Bronze iterations failed"
             exit 1
           fi
-      
+
           echo "✅ All Bronze iterations completed successfully"
   # ==============================================================
   # 3. Silver → Supabase
@@ -342,14 +342,14 @@ jobs:
     needs: parse-bronze
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    
+
     steps:
       - uses: actions/checkout@v6
-      
+
       - uses: actions/setup-python@v6
         with:
-          python-version: '3.11'
-      
+          python-version: "3.11"
+
       - name: Cache pip dependencies
         uses: actions/cache@v5
         with:
@@ -357,9 +357,9 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
-      
+
       - run: pip install -r requirements.txt
-      
+
       - name: Run Silver transformation
         id: run_silver
         env:
@@ -374,14 +374,14 @@ jobs:
     needs: silver
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    
+
     steps:
       - uses: actions/checkout@v6
-      
+
       - uses: actions/setup-python@v6
         with:
-          python-version: '3.11'
-      
+          python-version: "3.11"
+
       - name: Cache pip dependencies
         uses: actions/cache@v5
         with:
@@ -389,12 +389,20 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
-      
+
       - run: pip install -r requirements.txt
-      
-      - name: Gold → Supabase
+
+      - name: Run Gold refresh
         id: run_gold
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: python -m scripts.run_gold
+
+      - name: Upload Gold logs
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: gold-loader-logs
+          path: logs/
+          retention-days: 7
