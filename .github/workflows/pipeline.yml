@@ -5,6 +5,10 @@ on:
     - cron: '0 1 * * *'   # every day at 03:00 UTC
   workflow_dispatch:
 
+concurrency:
+  group: real-estate-pipeline
+  cancel-in-progress: false
+
 permissions:
   contents: write
   actions: write
