@@ -360,7 +360,8 @@ jobs:
       
       - run: pip install -r requirements.txt
       
-      - name: Silver → Supabase
+      - name: Run Silver transformation
+        id: run_silver
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
@@ -392,6 +393,7 @@ jobs:
       - run: pip install -r requirements.txt
       
       - name: Gold → Supabase
+        id: run_gold
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
