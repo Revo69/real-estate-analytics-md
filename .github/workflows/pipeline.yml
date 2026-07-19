@@ -293,6 +293,48 @@ jobs:
           else
             echo "⚠️ Log file not found"
           fi
+
+      - name: Validate bronze processing result
+        if: always()
+        run: |
+          failed=0
+      
+          if [ "${{ steps.bronze_1.outcome }}" != "success" ]; then
+            echo "❌ Bronze iteration 1 failed"
+            failed=1
+          fi
+      
+          if [ "${{ steps.bronze_2.outcome }}" != "success" ]; then
+            echo "❌ Bronze iteration 2 failed"
+            failed=1
+          fi
+      
+          if [ "${{ steps.bronze_3.outcome }}" != "success" ]; then
+            echo "❌ Bronze iteration 3 failed"
+            failed=1
+          fi
+      
+          if [ "${{ steps.bronze_4.outcome }}" != "success" ]; then
+            echo "❌ Bronze iteration 4 failed"
+            failed=1
+          fi
+      
+          if [ "${{ steps.bronze_5.outcome }}" != "success" ]; then
+            echo "❌ Bronze iteration 5 failed"
+            failed=1
+          fi
+      
+          if [ "${{ steps.bronze_6.outcome }}" != "success" ]; then
+            echo "❌ Bronze iteration 6 failed"
+            failed=1
+          fi
+      
+          if [ "$failed" -eq 1 ]; then
+            echo "❌ One or more Bronze iterations failed"
+            exit 1
+          fi
+      
+          echo "✅ All Bronze iterations completed successfully"
   # ==============================================================
   # 3. Silver → Supabase
   # ==============================================================
