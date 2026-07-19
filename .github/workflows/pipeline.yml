@@ -66,7 +66,8 @@ jobs:
       - name: Create logs directory
         run: mkdir -p logs
       
-      - name: Run links loader → Supabase (Batch 1)
+      - name: Scan listing pages 1-50 and collect links
+        id: collect_links
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
@@ -157,6 +158,7 @@ jobs:
         run: mkdir -p logs
       
       - name: Process next 500 pending links — iteration 1
+        id: bronze_1
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
@@ -172,6 +174,7 @@ jobs:
           sleep 30
       
       - name: Process next 500 pending links — iteration 2
+        id: bronze_2
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
@@ -187,6 +190,7 @@ jobs:
           sleep 30
 
       - name: Process next 500 pending links — iteration 3
+        id: bronze_3
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
@@ -202,6 +206,7 @@ jobs:
           sleep 30
 
       - name: Process next 500 pending links — iteration 4
+        id: bronze_4
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
@@ -217,6 +222,7 @@ jobs:
           sleep 30
 
       - name: Process next 500 pending links — iteration 5
+        id: bronze_5
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
@@ -232,6 +238,7 @@ jobs:
           sleep 30
 
       - name: Process next 500 pending links — iteration 6
+        id: bronze_6
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
