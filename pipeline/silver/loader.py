@@ -17,13 +17,10 @@ from pipeline.silver.normalizers import (
     normalize_date,
     normalize_price,
     normalize_text,
-    normalize_region
+    normalize_region,
 )
 
-from pipeline.silver.quality import (
-    calculate_quality_score,
-    assign_status
-)
+from pipeline.silver.quality import calculate_quality_score, assign_status
 
 # Load environment variables
 load_dotenv()
@@ -37,13 +34,11 @@ os.makedirs("logs", exist_ok=True)
 
 logging.basicConfig(
     level=logging.INFO,
-    format='[%(asctime)s] %(levelname)s: %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S',
-    handlers=[
-        logging.FileHandler(LOG_PATH, encoding="utf-8"),
-        logging.StreamHandler()
-    ]
+    format="[%(asctime)s] %(levelname)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    handlers=[logging.FileHandler(LOG_PATH, encoding="utf-8"), logging.StreamHandler()],
 )
+
 
 def parse_publication_date(raw_date: str):
     """Convert date strings to datetime.date:
@@ -75,12 +70,15 @@ def parse_publication_date(raw_date: str):
         if not month:
             raise ValueError(f"Unknown month: {month_str}")
 
-        dt = datetime.strptime(f"{day}.{month}.{year} {time_part.strip()}", "%d.%m.%Y %H:%M")
+        dt = datetime.strptime(
+            f"{day}.{month}.{year} {time_part.strip()}", "%d.%m.%Y %H:%M"
+        )
         return dt.date()
 
     except Exception as e:
         logging.error(f"Failed to parse publication_date '{raw_date}': {e}")
         return None
+
 
 def safe_json_loads(raw: Any) -> dict:
     if not raw:
@@ -102,8 +100,18 @@ def safe_json_loads(raw: Any) -> dict:
 def transform_record(row):
     """Transform bronze_estate row into silver_estate payload for Supabase."""
     (
-        id, url, ad_id, status, publication_date, user_login, deal_type,
-        region_raw, description, price_json, main_features_json, additional_features_json
+        id,
+        url,
+        ad_id,
+        status,
+        publication_date,
+        user_login,
+        deal_type,
+        region_raw,
+        description,
+        price_json,
+        main_features_json,
+        additional_features_json,
     ) = row
 
     price = safe_json_loads(price_json)
@@ -114,7 +122,7 @@ def transform_record(row):
 
     # address
     region_data = normalize_region(region_raw)
-    
+
     record = {
         "id": id,
         "url": url,
@@ -124,20 +132,17 @@ def transform_record(row):
         "user_login": user_login,
         "deal_type": deal_type,
         "description": description,
-
         # geo
         "municipality": region_data["municipality"],
-        "city":         region_data["city"],
-        "sector":       region_data["sector"],
-        "street_raw":   region_data["street_raw"],
-        "house":        region_data["house"],
-        "region_raw":   region_data["region_raw"],
-        
+        "city": region_data["city"],
+        "sector": region_data["sector"],
+        "street_raw": region_data["street_raw"],
+        "house": region_data["house"],
+        "region_raw": region_data["region_raw"],
         # Prices
         "price_mdl": normalize_price(price.get("mdl")),
         "price_eur": normalize_price(price.get("eur")),
         "price_usd": normalize_price(price.get("usd")),
-
         # Main features
         "listing_author": normalize_text(main.get("listing_author")),
         "number_of_rooms": normalize_number_of_rooms(main.get("number_of_rooms")),
@@ -156,7 +161,6 @@ def transform_record(row):
         "balcony_loggia": normalize_balcony(main.get("balcony_loggia")),
         "ceiling_height_cm": normalize_ceiling_height(main.get("ceiling_height_cm")),
         "parking_space": normalize_text(main.get("parking_space")),
-
         # Additional features
         "ready_to_move_in": add.get("ready_to_move_in"),
         "extension": add.get("extension"),
@@ -197,70 +201,91 @@ def batch_upload(records, batch_size=500):
     success_count = 0
     error_count = 0
     for i in range(0, len(records), batch_size):
-        batch = records[i:i+batch_size]
+        batch = records[i : i + batch_size]
         try:
             supabase.table("silver_estate").upsert(batch, on_conflict=["url"]).execute()
             success_count += len(batch)
-            logging.info(f"✅ Uploaded batch {i//batch_size+1} ({len(batch)} records)")
+            logging.info(
+                f"✅ Uploaded batch {i // batch_size + 1} ({len(batch)} records)"
+            )
         except Exception as e:
             error_count += len(batch)
-            logging.error(f"❌ Failed to upload batch {i//batch_size+1}: {e}")
+            logging.error(f"❌ Failed to upload batch {i // batch_size + 1}: {e}")
         time.sleep(0.5)  # small delay between batches
     logging.info(f"📊 Upload summary: {success_count} successful, {error_count} failed")
+
+    if error_count:
+        raise RuntimeError(f"Silver upload failed for {error_count} record(s)")
 
 
 def fetch_all_records(table_name, columns, page_size=1000):
     """Fetch all records from Supabase table with pagination (service key bypass RLS)."""
     all_rows = []
     offset = 0
-    
+
     while True:
         try:
             # With service key, data can be retrieved without RLS restrictions
-            resp = supabase.table(table_name).select(columns).range(offset, offset + page_size - 1).execute()
-            
+            resp = (
+                supabase.table(table_name)
+                .select(columns)
+                .range(offset, offset + page_size - 1)
+                .execute()
+            )
+
             if not resp.data:
                 break
-            
+
             batch_size = len(resp.data)
             all_rows.extend(resp.data)
             logging.info(f"📥 Fetched {batch_size} records (total: {len(all_rows)})")
-            
+
             # If we received fewer than page_size records, it's the last page
             if batch_size < page_size:
                 break
-            
+
             offset += page_size
             # With service key, we can remove or minimize delay
             time.sleep(0.1)
-            
-        except Exception as e:
-            logging.error(f"Failed to fetch records at offset {offset}: {e}")
-            break
-    
+
+        except Exception as error:
+            logging.exception(f"Failed to fetch records at offset {offset}")
+            raise RuntimeError(
+                f"Could not fetch Bronze records at offset {offset}"
+            ) from error
+
     return all_rows
 
 
 def main():
     columns = "id, url, ad_id, status, publication_date, user_login, deal_type, region, description, price_json, main_features_json, additional_features_json"
-    
+
     # Use pagination to fetch all records
     raw_data = fetch_all_records("bronze_estate", columns, page_size=1000)
-    
+
     rows = [
         (
-            r["id"], r["url"], r.get("ad_id"), r.get("status"), r.get("publication_date"),
-            r.get("user_login"), r.get("deal_type"), r.get("region"), r.get("description"),
-            r.get("price_json"), r.get("main_features_json"), r.get("additional_features_json")
+            r["id"],
+            r["url"],
+            r.get("ad_id"),
+            r.get("status"),
+            r.get("publication_date"),
+            r.get("user_login"),
+            r.get("deal_type"),
+            r.get("region"),
+            r.get("description"),
+            r.get("price_json"),
+            r.get("main_features_json"),
+            r.get("additional_features_json"),
         )
         for r in raw_data
     ]
-    
+
     logging.info(f"Found {len(rows)} estates to process")
-    
+
     records = [transform_record(row) for row in rows]
     batch_upload(records, batch_size=500)
-    
+
     logging.info("🎉 Silver layer sync completed")
 
 
