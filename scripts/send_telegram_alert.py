@@ -27,7 +27,7 @@ def main() -> int:
         "🔴 Estate MD pipeline failed\n\n"
         f"Stage: {args.stage}\n"
         f"Run: {args.run_url}\n\n"
-        "Silver and Gold were not updated after the failed stage."
+        "Check the GitHub Actions run and pipeline_runs before using new data."
     )
 
     try:
