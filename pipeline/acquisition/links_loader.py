@@ -129,7 +129,10 @@ def fetch_links_from_page(page: int) -> list[str]:
                     EC.presence_of_element_located((By.CSS_SELECTOR, "a[href^='/ru/']"))
                 )
             except TimeoutException:
-                logging.warning(f"Timeout waiting for links on page {page}")
+                logging.warning(
+                    f"Timeout waiting for links on page {page}; "
+                    f"title={driver.title!r}; current_url={driver.current_url}"
+                )
                 continue
 
             soup = BeautifulSoup(driver.page_source, "html.parser")
