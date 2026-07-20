@@ -132,7 +132,7 @@ def fetch_links_from_page(page: int) -> list[str]:
             try:
                 WebDriverWait(
                     driver,
-                    35,
+                    65,
                     ignored_exceptions=(StaleElementReferenceException,),
                 ).until(
                     lambda current_driver: any(
