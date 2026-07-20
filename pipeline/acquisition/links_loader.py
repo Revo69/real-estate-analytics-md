@@ -105,10 +105,23 @@ def fetch_links_from_page(page: int) -> list[str]:
             try:
                 driver.set_page_load_timeout(60)
                 driver.get(url)
-                time.sleep(random.uniform(2.0, 3.0))
-            except (TimeoutException, WebDriverException) as e:
-                logging.warning(f"Page {page} failed to load (attempt {attempt}): {e}")
+
+            except TimeoutException:
+                logging.warning(
+                    f"Page {page} did not finish loading; checking the partial DOM"
+                )
+                try:
+                    driver.execute_script("window.stop();")
+                except WebDriverException:
+                    pass
+
+            except WebDriverException as error:
+                logging.warning(
+                    f"Page {page} failed to load (attempt {attempt}): {error}"
+                )
                 continue
+
+            time.sleep(random.uniform(2.0, 3.0))
 
             # Wait for at least one card link to appear
             try:
