@@ -282,6 +282,8 @@ def main():
                     )
 
                     if all(p in failed_pages for p in recent_pages):
+                        for pending_future in futures:
+                            pending_future.cancel()
                         failed_pages_text = ", ".join(
                             str(p) for p in sorted(failed_pages)
                         )
