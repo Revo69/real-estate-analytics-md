@@ -305,9 +305,10 @@ def main(start: int, end: int):
             .execute()
         )
         rows = resp.data or []
-    except Exception as e:
-        logging.error(f"❌ Failed to fetch pending links: {e}")
-        rows = []
+
+    except Exception as error:
+        logging.exception("Failed to fetch pending links")
+        raise RuntimeError("Could not fetch pending links from raw_links") from error
 
     if not rows:
         logging.warning(f"⚠️ No pending links found in range {start}-{end}")
@@ -323,10 +324,10 @@ def main(start: int, end: int):
     driver = None
     try:
         driver = create_driver_with_retry(max_retries=5)
-    except Exception as e:
-        logging.error(f"❌ Failed to initialize driver after all retries: {e}")
-        logging.error("🚨 Cannot proceed without driver. Exiting.")
-        return
+
+    except Exception as error:
+        logging.exception("Failed to fetch pending links")
+        raise RuntimeError("Could not fetch pending links from raw_links") from error
 
     success_count = 0
     failed_count = 0
