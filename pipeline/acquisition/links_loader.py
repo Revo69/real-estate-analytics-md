@@ -20,6 +20,7 @@ from supabase import create_client, Client
 import time
 import random
 
+from common.pipeline_runs import finish_run, get_run_id, start_run, update_run
 
 # Load environment variables
 load_dotenv()
@@ -141,10 +142,10 @@ def fetch_links_from_page(page: int) -> list[str]:
         driver.quit()
 
 
-def save_links_to_db(links: list[str]):
+def save_links_to_db(links: list[str]) -> int:
     if not links:
         logging.info("No links to save")
-        return
+        return 0
 
     before_resp = (
         supabase.table("raw_links").select("*", count="exact").limit(1).execute()
@@ -173,7 +174,7 @@ def save_links_to_db(links: list[str]):
         logging.info(
             f"No new links to save (all {len(links)} are duplicates, total {before})"
         )
-        return
+        return 0
 
     INSERT_BATCH_SIZE = 1000
     inserted_count = 0
@@ -200,6 +201,8 @@ def save_links_to_db(links: list[str]):
         f"(skipped {len(links) - inserted_count} duplicates, total {after})"
     )
 
+    return inserted_count
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -207,28 +210,56 @@ def main():
     parser.add_argument("--end", type=int, required=True, help="End page number")
     args = parser.parse_args()
 
-    all_links = set()
-    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        futures = {
-            executor.submit(fetch_links_from_page, page): page
-            for page in range(args.start, args.end + 1)
-        }
-        for future in as_completed(futures):
-            page = futures[future]
-            try:
-                links = future.result()
-                if links:
-                    all_links.update(links)
-                else:
-                    logging.error(f"Page {page} completely failed")
-            except Exception as e:
-                logging.exception(f"Unexpected error on page {page}: {e}")
+    run_id = get_run_id()
+    start_run(run_id)
 
-    logging.info(
-        f"Collected {len(all_links)} unique links in batch {args.start}-{args.end}"
-    )
-    if all_links:
-        save_links_to_db(sorted(all_links))
+    try:
+        all_links = set()
+
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+            futures = {
+                executor.submit(fetch_links_from_page, page): page
+                for page in range(args.start, args.end + 1)
+            }
+
+            for future in as_completed(futures):
+                page = futures[future]
+
+                try:
+                    links = future.result()
+
+                    if links:
+                        all_links.update(links)
+                    else:
+                        logging.error(f"Page {page} completely failed")
+
+                except Exception as error:
+                    logging.exception(f"Unexpected error on page {page}: {error}")
+
+        logging.info(
+            f"Collected {len(all_links)} unique links in batch {args.start}-{args.end}"
+        )
+
+        new_links = save_links_to_db(sorted(all_links)) if all_links else 0
+
+        update_run(
+            run_id,
+            links_discovered=len(all_links),
+            new_links=new_links,
+            current_stage="bronze",
+        )
+
+    except Exception as error:
+        logging.exception("Links collection failed")
+
+        finish_run(
+            run_id,
+            status="failed",
+            failed_stage="collect_links",
+            error_message=str(error),
+        )
+
+        raise
 
 
 if __name__ == "__main__":
