@@ -56,6 +56,8 @@ MAX_RETRIES = 3
 
 def init_driver():
     options = uc.ChromeOptions()
+    options.page_load_strategy = "eager"
+
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
@@ -63,6 +65,18 @@ def init_driver():
     options.add_argument("--headless=new")
     options.add_argument("--window-size=1920,1080")
     options.add_argument("--lang=ru-RU")
+    options.add_argument("--blink-settings=imagesEnabled=false")
+    options.add_argument("--disable-notifications")
+    options.add_argument("--disable-extensions")
+    options.add_argument("--disable-background-networking")
+
+    options.add_experimental_option(
+        "prefs",
+        {
+            "profile.managed_default_content_settings.images": 2,
+            "profile.default_content_setting_values.notifications": 2,
+        },
+    )
 
     from shutil import which
     import subprocess
