@@ -126,7 +126,7 @@ def fetch_links_from_page(page: int) -> list[str]:
 
             # Wait for at least one card link to appear
             try:
-                WebDriverWait(driver, 15).until(
+                WebDriverWait(driver, 35).until(
                     EC.presence_of_element_located((By.CSS_SELECTOR, "a[href^='/ru/']"))
                 )
             except TimeoutException:
