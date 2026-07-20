@@ -326,8 +326,8 @@ def main(start: int, end: int):
         driver = create_driver_with_retry(max_retries=5)
 
     except Exception as error:
-        logging.exception("Failed to fetch pending links")
-        raise RuntimeError("Could not fetch pending links from raw_links") from error
+        logging.exception("Failed to initialize Chrome driver after all retries")
+        raise RuntimeError("Bronze cannot run without a Chrome driver") from error
 
     success_count = 0
     failed_count = 0
