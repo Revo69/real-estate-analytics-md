@@ -103,7 +103,7 @@ def fetch_links_from_page(page: int) -> list[str]:
         for attempt in range(1, MAX_RETRIES + 1):
             logging.info(f"Page {page}, attempt {attempt}: {url}")
             try:
-                driver.set_page_load_timeout(60)
+                driver.set_page_load_timeout(20)
                 driver.get(url)
 
             except TimeoutException:
