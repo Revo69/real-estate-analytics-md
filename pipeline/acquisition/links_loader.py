@@ -52,6 +52,7 @@ BASE_URL = (
 
 MAX_WORKERS = int(os.getenv("MAX_WORKERS", 1))
 MAX_RETRIES = 3
+MAX_CONSECUTIVE_FAILED_PAGES = int(os.getenv("MAX_CONSECUTIVE_FAILED_PAGES", 3))
 
 
 def init_driver():
@@ -215,6 +216,7 @@ def main():
 
     try:
         all_links = set()
+        failed_pages = []
 
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
             futures = {
@@ -231,7 +233,15 @@ def main():
                     if links:
                         all_links.update(links)
                     else:
+                        failed_pages.append(page)
                         logging.error(f"Page {page} completely failed")
+
+                        if len(failed_pages) >= MAX_CONSECUTIVE_FAILED_PAGES:
+                            failed_pages_text = ", ".join(str(p) for p in failed_pages)
+                            raise RuntimeError(
+                                "Too many listing pages failed during links collection: "
+                                f"{failed_pages_text}"
+                            )
 
                 except Exception as error:
                     logging.exception(f"Unexpected error on page {page}: {error}")
