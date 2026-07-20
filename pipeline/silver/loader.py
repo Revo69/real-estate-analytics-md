@@ -21,6 +21,7 @@ from pipeline.silver.normalizers import (
 )
 
 from pipeline.silver.quality import calculate_quality_score, assign_status
+from common.pipeline_runs import finish_run, get_run_id, update_run
 
 # Load environment variables
 load_dotenv()
@@ -258,35 +259,55 @@ def fetch_all_records(table_name, columns, page_size=1000):
 
 
 def main():
-    columns = "id, url, ad_id, status, publication_date, user_login, deal_type, region, description, price_json, main_features_json, additional_features_json"
+    run_id = get_run_id()
+    update_run(run_id, current_stage="silver")
 
-    # Use pagination to fetch all records
-    raw_data = fetch_all_records("bronze_estate", columns, page_size=1000)
-
-    rows = [
-        (
-            r["id"],
-            r["url"],
-            r.get("ad_id"),
-            r.get("status"),
-            r.get("publication_date"),
-            r.get("user_login"),
-            r.get("deal_type"),
-            r.get("region"),
-            r.get("description"),
-            r.get("price_json"),
-            r.get("main_features_json"),
-            r.get("additional_features_json"),
+    try:
+        columns = (
+            "id, url, ad_id, status, publication_date, user_login, deal_type, "
+            "region, description, price_json, main_features_json, "
+            "additional_features_json"
         )
-        for r in raw_data
-    ]
 
-    logging.info(f"Found {len(rows)} estates to process")
+        raw_data = fetch_all_records("bronze_estate", columns, page_size=1000)
 
-    records = [transform_record(row) for row in rows]
-    batch_upload(records, batch_size=500)
+        rows = [
+            (
+                row["id"],
+                row["url"],
+                row.get("ad_id"),
+                row.get("status"),
+                row.get("publication_date"),
+                row.get("user_login"),
+                row.get("deal_type"),
+                row.get("region"),
+                row.get("description"),
+                row.get("price_json"),
+                row.get("main_features_json"),
+                row.get("additional_features_json"),
+            )
+            for row in raw_data
+        ]
 
-    logging.info("🎉 Silver layer sync completed")
+        logging.info(f"Found {len(rows)} estates to process")
+
+        records = [transform_record(row) for row in rows]
+        batch_upload(records, batch_size=500)
+
+        update_run(run_id, current_stage="gold")
+        logging.info("Silver layer sync completed")
+
+    except Exception as error:
+        logging.exception("Silver transformation failed")
+
+        finish_run(
+            run_id,
+            status="failed",
+            failed_stage="silver",
+            error_message=str(error),
+        )
+
+        raise
 
 
 if __name__ == "__main__":
