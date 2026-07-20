@@ -405,3 +405,41 @@ jobs:
           name: gold-loader-logs
           path: logs/
           retention-days: 7
+
+  # ==============================================================
+  # 5. Notify on failure (telegram)
+  # ==============================================================
+  notify-on-failure:
+    needs: [collect-links, parse-bronze, silver, gold]
+    if: ${{ always() && (needs.collect-links.result == 'failure' || needs.parse-bronze.result == 'failure' || needs.silver.result == 'failure' || needs.gold.result == 'failure') }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Send Telegram failure alert
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          python -m pip install --disable-pip-version-check requests
+
+          failed_stage="unknown"
+
+          if [ "${{ needs.collect-links.result }}" = "failure" ]; then
+            failed_stage="collect-links"
+          elif [ "${{ needs.parse-bronze.result }}" = "failure" ]; then
+            failed_stage="parse-bronze"
+          elif [ "${{ needs.silver.result }}" = "failure" ]; then
+            failed_stage="silver"
+          elif [ "${{ needs.gold.result }}" = "failure" ]; then
+            failed_stage="gold"
+          fi
+
+          python -m scripts.send_telegram_alert \
+            --stage "$failed_stage" \
+            --run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
