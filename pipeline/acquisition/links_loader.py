@@ -152,9 +152,21 @@ def fetch_links_from_page(page: int) -> list[str]:
                 logging.info(f"Found {len(links)} links on page {page}")
                 return links
 
-        logging.error(
-            f"Failed to get links from page {page} after {MAX_RETRIES} attempts"
+        screenshot_path = os.path.join(
+            "logs",
+            f"links_page_{page}_failed.png",
         )
+
+        try:
+            driver.save_screenshot(screenshot_path)
+            logging.error(
+                f"Saved failed page screenshot to {screenshot_path}; "
+                f"title={driver.title!r}; "
+                f"html_length={len(driver.page_source)}"
+            )
+        except WebDriverException as error:
+            logging.warning(f"Could not save screenshot for page {page}: {error}")
+
         return []
     finally:
         driver.quit()
