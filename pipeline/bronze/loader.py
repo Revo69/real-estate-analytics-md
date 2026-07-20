@@ -13,6 +13,8 @@ import time
 import random
 import shutil
 
+from common.pipeline_runs import get_run_id, update_run
+
 load_dotenv()
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
@@ -290,6 +292,10 @@ def main(start: int, end: int):
     Load pending links from raw_links in the given range [start, end],
     parse them, and save into bronze_estate.
     """
+
+    run_id = get_run_id()
+    update_run(run_id, current_stage="bronze")
+
     offset = start - 1 if start > 0 else 0
     limit = end - start + 1
 
