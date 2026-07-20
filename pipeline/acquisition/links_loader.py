@@ -53,6 +53,7 @@ BASE_URL = (
 MAX_WORKERS = int(os.getenv("MAX_WORKERS", 1))
 MAX_RETRIES = 3
 MAX_CONSECUTIVE_FAILED_PAGES = int(os.getenv("MAX_CONSECUTIVE_FAILED_PAGES", 3))
+MAX_FAILED_PAGES_RATIO = float(os.getenv("MAX_FAILED_PAGES_RATIO", 0.2))
 
 
 def init_driver():
@@ -236,10 +237,17 @@ def main():
                         failed_pages.append(page)
                         logging.error(f"Page {page} completely failed")
 
-                        if len(failed_pages) >= MAX_CONSECUTIVE_FAILED_PAGES:
+                        recent_pages = list(
+                            range(
+                                page - MAX_CONSECUTIVE_FAILED_PAGES + 1,
+                                page + 1,
+                            )
+                        )
+
+                        if all(p in failed_pages for p in recent_pages):
                             failed_pages_text = ", ".join(str(p) for p in failed_pages)
                             raise RuntimeError(
-                                "Too many listing pages failed during links collection: "
+                                "Too many consecutive listing pages failed during links collection: "
                                 f"{failed_pages_text}"
                             )
 
@@ -249,6 +257,21 @@ def main():
         logging.info(
             f"Collected {len(all_links)} unique links in batch {args.start}-{args.end}"
         )
+
+        total_pages = args.end - args.start + 1
+        max_failed_pages = int(total_pages * MAX_FAILED_PAGES_RATIO)
+
+        if failed_pages:
+            failed_pages_text = ", ".join(str(p) for p in sorted(failed_pages))
+            logging.warning(
+                f"Failed to collect links from {len(failed_pages)} page(s): "
+                f"{failed_pages_text}"
+            )
+
+        if len(failed_pages) > max_failed_pages:
+            raise RuntimeError(
+                f"Too many listing pages failed: {len(failed_pages)} of {total_pages}"
+            )
 
         new_links = save_links_to_db(sorted(all_links)) if all_links else 0
 
