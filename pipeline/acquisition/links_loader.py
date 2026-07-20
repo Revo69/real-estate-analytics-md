@@ -8,8 +8,12 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, WebDriverException
+
+from selenium.common.exceptions import (
+    StaleElementReferenceException,
+    TimeoutException,
+    WebDriverException,
+)
 
 from bs4 import BeautifulSoup
 import argparse
@@ -126,7 +130,11 @@ def fetch_links_from_page(page: int) -> list[str]:
 
             # Wait for at least one card link to appear
             try:
-                WebDriverWait(driver, 35).until(
+                WebDriverWait(
+                    driver,
+                    35,
+                    ignored_exceptions=(StaleElementReferenceException,),
+                ).until(
                     lambda current_driver: any(
                         AD_HREF_RE.match(
                             (element.get_dom_attribute("href") or "").split("?")[0]
