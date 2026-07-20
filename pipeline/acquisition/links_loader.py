@@ -58,6 +58,7 @@ MAX_FAILED_PAGES_RATIO = float(os.getenv("MAX_FAILED_PAGES_RATIO", 0.2))
 
 def init_driver():
     options = uc.ChromeOptions()
+    options.page_load_strategy = "eager"
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
