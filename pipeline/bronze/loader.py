@@ -13,7 +13,7 @@ import time
 import random
 import shutil
 
-from common.pipeline_runs import get_run_id, update_run
+from common.pipeline_runs import finish_run, get_run_id, update_run
 
 load_dotenv()
 
@@ -314,6 +314,14 @@ def main(start: int, end: int):
 
     except Exception as error:
         logging.exception("Failed to fetch pending links")
+
+        finish_run(
+            run_id,
+            status="failed",
+            failed_stage="bronze",
+            error_message=str(error),
+        )
+
         raise RuntimeError("Could not fetch pending links from raw_links") from error
 
     if not rows:
@@ -333,6 +341,14 @@ def main(start: int, end: int):
 
     except Exception as error:
         logging.exception("Failed to initialize Chrome driver after all retries")
+
+        finish_run(
+            run_id,
+            status="failed",
+            failed_stage="bronze",
+            error_message=str(error),
+        )
+
         raise RuntimeError("Bronze cannot run without a Chrome driver") from error
 
     success_count = 0
