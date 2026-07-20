@@ -228,31 +228,39 @@ def main():
             for future in as_completed(futures):
                 page = futures[future]
 
+                page_failed = False
+
                 try:
                     links = future.result()
 
                     if links:
                         all_links.update(links)
                     else:
+                        page_failed = True
                         failed_pages.append(page)
                         logging.error(f"Page {page} completely failed")
 
-                        recent_pages = list(
-                            range(
-                                page - MAX_CONSECUTIVE_FAILED_PAGES + 1,
-                                page + 1,
-                            )
-                        )
-
-                        if all(p in failed_pages for p in recent_pages):
-                            failed_pages_text = ", ".join(str(p) for p in failed_pages)
-                            raise RuntimeError(
-                                "Too many consecutive listing pages failed during links collection: "
-                                f"{failed_pages_text}"
-                            )
-
                 except Exception as error:
+                    page_failed = True
+                    failed_pages.append(page)
                     logging.exception(f"Unexpected error on page {page}: {error}")
+
+                if page_failed:
+                    recent_pages = list(
+                        range(
+                            page - MAX_CONSECUTIVE_FAILED_PAGES + 1,
+                            page + 1,
+                        )
+                    )
+
+                    if all(p in failed_pages for p in recent_pages):
+                        failed_pages_text = ", ".join(
+                            str(p) for p in sorted(failed_pages)
+                        )
+                        raise RuntimeError(
+                            "Too many consecutive listing pages failed during links collection: "
+                            f"{failed_pages_text}"
+                        )
 
         logging.info(
             f"Collected {len(all_links)} unique links in batch {args.start}-{args.end}"
