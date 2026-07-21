@@ -28,5 +28,6 @@ def main():
 
         raise
 
+    update_run(run_id, gold_refreshed=True)
     finish_run(run_id, status="succeeded")
     logging.info("Gold loader finished successfully.")
