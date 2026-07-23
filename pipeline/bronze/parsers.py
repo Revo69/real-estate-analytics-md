@@ -6,6 +6,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
 from .mappings import MAIN_FEATURES_MAP, ADDITIONAL_FEATURES_MAP
+from .cleaners import clean_number
 from typing import Dict, Optional
 from utils.rates import convert_currency
 import random
@@ -135,15 +136,6 @@ def extract_boolean_features(soup, block_testid, item_selector, key_map, block_n
 # ──────────────────────────────────────────────
 # Price extraction
 # ──────────────────────────────────────────────
-
-
-def clean_number(num_str: str) -> Optional[int]:
-    if not num_str:
-        return None
-    try:
-        return int(num_str.replace(" ", "").replace("\u00a0", ""))
-    except (ValueError, AttributeError):
-        return None
 
 
 def get_converted_prices(
@@ -291,7 +283,7 @@ def parse_features(url: str, driver=None) -> dict:
 
         # ── Region / address ──────────────────────────────────────────────
         # New design: "Бельцы мун., Бельцы, Центр, str. Sennaia, 2"
-        #features.update(extract_text(soup, "div.styles_map__address__wnNuo", "region"))
+        # features.update(extract_text(soup, "div.styles_map__address__wnNuo", "region"))
         features.update(extract_region(soup))
 
         # ── Description ───────────────────────────────────────────────────
