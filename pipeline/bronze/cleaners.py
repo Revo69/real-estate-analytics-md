@@ -1,12 +1,11 @@
 import re
-from typing import Optional
 
 
 class PriceParseError(ValueError):
     """Raised when a price value cannot be parsed."""
 
 
-def clean_number(num_str: str) -> Optional[int]:
+def clean_number(num_str: str) -> int | None:
     if not num_str:
         return None
 

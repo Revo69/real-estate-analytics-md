@@ -1,17 +1,20 @@
-import re
 import logging
-
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from bs4 import BeautifulSoup
-from .mappings import MAIN_FEATURES_MAP, ADDITIONAL_FEATURES_MAP
-from .cleaners import clean_number
-from typing import Dict, Optional
-from utils.rates import convert_currency
 import random
+import re
 import time
 
+from bs4 import BeautifulSoup
+from selenium.common.exceptions import TimeoutException, WebDriverException
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
+
+from utils.rates import convert_currency
+
+from .cleaners import clean_number
+from .mappings import ADDITIONAL_FEATURES_MAP, MAIN_FEATURES_MAP
+
+logger = logging.getLogger(__name__)
 
 # ──────────────────────────────────────────────
 # Helper extractors
@@ -138,9 +141,7 @@ def extract_boolean_features(soup, block_testid, item_selector, key_map, block_n
 # ──────────────────────────────────────────────
 
 
-def get_converted_prices(
-    main_price: int, main_currency: str
-) -> Dict[str, Optional[int]]:
+def get_converted_prices(main_price: int, main_currency: str) -> dict[str, int | None]:
     result = {"mdl": None, "eur": None, "usd": None}
     if not main_price or not main_currency:
         return result
@@ -152,7 +153,7 @@ def get_converted_prices(
     return result
 
 
-def extract_all_prices(soup: BeautifulSoup) -> Dict[str, Optional[int]]:
+def extract_all_prices(soup: BeautifulSoup) -> dict[str, int | None]:
     """
     New design price selector: span.styles_price__main__kz3DX
     Example: '49 950 €'
@@ -238,21 +239,21 @@ def parse_features(url: str, driver=None) -> dict:
                 WebDriverWait(driver, 20).until(
                     EC.presence_of_element_located((By.CSS_SELECTOR, selector))
                 )
-                logging.info(f"   ✅ Page ready, found: {selector}")
+                logger.info(f"   ✅ Page ready, found: {selector}")
                 page_ready = True
                 break
-            except Exception:
+            except TimeoutException:
                 continue
 
         if not page_ready:
             try:
-                logging.warning(
+                logger.warning(
                     f"   ⚠️ No readiness selector found. "
                     f"Title: '{driver.title}', URL: {driver.current_url}"
                 )
-                logging.warning(f"   📋 HTML preview:\n{driver.page_source[:3000]}")
-            except Exception:
-                pass
+                logger.warning(f"   📋 HTML preview:\n{driver.page_source[:3000]}")
+            except WebDriverException:
+                logger.warning("Could not read failed page diagnostics for %s", url)
             return {"url": url, "status": "failed"}
 
         time.sleep(random.uniform(0.5, 1.0))  # let dynamic content settle
@@ -322,10 +323,6 @@ def parse_features(url: str, driver=None) -> dict:
 
         return features
 
-    except Exception as e:
-        import traceback
-
-        logging.error(
-            f"   ❌ parse_features error for {url}: {e}\n{traceback.format_exc()}"
-        )
-        return {"url": url, "status": f"error: {e}"}
+    except Exception:
+        logger.exception("parse_features error for %s", url)
+        return {"url": url, "status": "error"}
