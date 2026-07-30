@@ -13,7 +13,6 @@ permissions:
   contents: read
 
 jobs:
-
   # ==============================================================
   # 4. Gold → Supabase
   # ==============================================================
@@ -58,8 +57,8 @@ jobs:
   # 5. Notify on failure (telegram)
   # ==============================================================
   notify-on-failure:
-    needs: [collect-links, parse-bronze, silver, gold]
-    if: ${{ always() && (needs.collect-links.result == 'failure' || needs.parse-bronze.result == 'failure' || needs.silver.result == 'failure' || needs.gold.result == 'failure') }}
+    needs: [gold]
+    if: ${{ always() && (needs.gold.result == 'failure') }}
     runs-on: ubuntu-latest
 
     steps:
@@ -78,13 +77,7 @@ jobs:
 
           failed_stage="unknown"
 
-          if [ "${{ needs.collect-links.result }}" = "failure" ]; then
-            failed_stage="collect-links"
-          elif [ "${{ needs.parse-bronze.result }}" = "failure" ]; then
-            failed_stage="parse-bronze"
-          elif [ "${{ needs.silver.result }}" = "failure" ]; then
-            failed_stage="silver"
-          elif [ "${{ needs.gold.result }}" = "failure" ]; then
+          if [ "${{ needs.gold.result }}" = "failure" ]; then
             failed_stage="gold"
           fi
 
