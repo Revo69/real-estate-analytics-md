@@ -94,7 +94,7 @@ jobs:
   # 2. Bronze-scraping → Supabase
   # ==============================================================
   parse-bronze:
-    #needs: collect-links
+    needs: collect-links
     runs-on: ubuntu-latest
     timeout-minutes: 360 # 6 hours for bronze parsing
 
