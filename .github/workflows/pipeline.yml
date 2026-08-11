@@ -174,7 +174,7 @@ jobs:
           echo "🚀 Processing next 500 pending links — iteration 1..."
           python -m pipeline.bronze.loader --start 0 --end 500
         continue-on-error: true
-        timeout-minutes: 120
+        timeout-minutes: 240
 
       - name: Sleep between batches
         run: |
