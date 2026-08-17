@@ -46,18 +46,20 @@ def extract_text(
 
 def extract_info_item(soup, label: str, key_name: str) -> dict:
     """
-    Find <p class="styles_advert__info__item___cXvq"> that starts with label,
-    return text of inner <span class="styles_advert__info__item__value__y3xkE">.
+    Find an advert info item that starts with label and return its value.
+
+    The site uses CSS-module hashes, so match the stable class-name suffixes
+    instead of a complete generated class name.
 
     Example HTML:
-      <p class="styles_advert__info__item___cXvq">
+      <div class="...advert__info__item">
         Тип предложения:
-        <span class="styles_advert__info__item__value__y3xkE">Продам</span>
-      </p>
+        <span class="...advert__info__item__value">Продам</span>
+      </div>
     """
-    for p in soup.select("p.styles_advert__info__item___cXvq"):
-        if p.get_text(strip=True).startswith(label):
-            span = p.select_one("span.styles_advert__info__item__value__y3xkE")
+    for item in soup.select("[class*='advert__info__item']"):
+        if item.get_text(strip=True).startswith(label):
+            span = item.select_one("[class*='advert__info__item__value']")
             return {key_name: span.get_text(strip=True) if span else None}
     return {key_name: None}
 
@@ -120,7 +122,7 @@ def extract_boolean_features(soup, block_testid, item_selector, key_map, block_n
         return result
 
     for li in block.select(item_selector):
-        key_tag = li.select_one(".styles_group__key__SXHV5")
+        key_tag = li.select_one("[class*='group__key']")
         if not key_tag:
             continue
         raw_key = key_tag.get_text(strip=True)
@@ -162,8 +164,18 @@ def extract_all_prices(soup: BeautifulSoup) -> dict[str, int | None]:
     result = {"mdl": None, "eur": None, "usd": None}
     found_any = False
 
+    # Stable Open Graph product metadata is present before client-side rendering.
+    amount_tag = soup.select_one("meta[property='product:price:amount']")
+    currency_tag = soup.select_one("meta[property='product:price:currency']")
+    if amount_tag and currency_tag:
+        amount = clean_number(amount_tag.get("content", ""))
+        currency = currency_tag.get("content", "").lower()
+        if amount and currency in result:
+            result[currency] = amount
+            found_any = True
+
     # Primary: dedicated price span
-    price_tag = soup.select_one("span.styles_price__main__kz3DX")
+    price_tag = soup.select_one("[class*='price__main']")
     price_text = price_tag.get_text(strip=True) if price_tag else ""
 
     # Fallback: scan entire onboarding wrapper that contains currency rates
@@ -201,6 +213,12 @@ def extract_all_prices(soup: BeautifulSoup) -> dict[str, int | None]:
 
 
 def extract_region(soup) -> dict:
+    map_block = soup.select_one("[data-block='map']")
+    if map_block:
+        title_tag = map_block.select_one("[class*='map__title']")
+        if title_tag:
+            return {"region": title_tag.get_text(strip=True)}
+
     # title
     title_tag = soup.select_one("div.styles_map__title__UgISm")
     title_text = title_tag.get_text(strip=True) if title_tag else ""
@@ -222,8 +240,8 @@ def extract_region(soup) -> dict:
 
 # Selectors that confirm the new-design page has loaded
 _READINESS_SELECTORS = [
-    "p.styles_advert__info__item___cXvq",  # info block (updated/views/deal type)
-    "span.styles_price__main__kz3DX",  # price
+    "[class*='advert__info__item']",  # info block (updated/views/deal type)
+    "meta[property='product:price:amount']",  # price
     "div[data-testid='Характеристики']",  # features block
 ]
 
@@ -279,7 +297,7 @@ def parse_features(url: str, driver=None) -> dict:
 
         # ── User login ────────────────────────────────────────────────────
         features.update(
-            extract_text(soup, "a.styles_user__card__login___Ug2V", "user_login")
+            extract_text(soup, "[class*='user__card__login']", "user_login")
         )
 
         # ── Region / address ──────────────────────────────────────────────
@@ -289,7 +307,11 @@ def parse_features(url: str, driver=None) -> dict:
 
         # ── Description ───────────────────────────────────────────────────
         features.update(
-            extract_text(soup, "div.styles_description__body__qh1qw", "description")
+            extract_text(
+                soup,
+                "[data-block='description'] [itemprop='description']",
+                "description",
+            )
         )
 
         # ── Main features (Характеристики) ────────────────────────────────
@@ -297,10 +319,10 @@ def parse_features(url: str, driver=None) -> dict:
             extract_list_features(
                 soup,
                 block_testid="Характеристики",
-                key_selector=".styles_group__key__SXHV5",
+                key_selector="[class*='group__key']",
                 value_selectors=[
-                    ".styles_group__value__BlYqu",  # plain text value
-                    ".styles_group__link__GA7Xf",  # clickable link value
+                    "[class*='group__value']",  # plain text value
+                    "[class*='group__link']",  # clickable link value
                 ],
                 key_map=MAIN_FEATURES_MAP,
                 block_name="main_features",
@@ -312,7 +334,7 @@ def parse_features(url: str, driver=None) -> dict:
             extract_boolean_features(
                 soup,
                 block_testid="Дополнительно",
-                item_selector="li.styles_group__feature__GsOUi",
+                item_selector="li[class*='group__feature']",
                 key_map=ADDITIONAL_FEATURES_MAP,
                 block_name="additional_features",
             )
@@ -320,6 +342,17 @@ def parse_features(url: str, driver=None) -> dict:
 
         # ── Prices ────────────────────────────────────────────────────────
         features["price_json"] = extract_all_prices(soup)
+
+        core_fields = (
+            features.get("ad_id"),
+            any(features["price_json"].values()),
+            features.get("region")
+            or features.get("description")
+            or features.get("main_features"),
+        )
+        if not all(core_fields):
+            logger.warning("Listing page loaded but required data was not parsed: %s", url)
+            return {"url": url, "status": "failed"}
 
         return features
 
