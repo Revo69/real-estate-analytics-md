@@ -12,8 +12,6 @@ import undetected_chromedriver as uc
 import time
 import random
 import shutil
-import subprocess
-from shutil import which
 
 from common.pipeline_runs import finish_run, get_run_id, update_run
 
@@ -213,6 +211,8 @@ def create_driver_with_retry(max_retries=5):
 
             logging.info("   Creating driver (attempt {attempt + 1})...")
 
+            from shutil import which
+            import subprocess
             chrome_path = which("google-chrome") or "/usr/bin/google-chrome"
             chrome_version = subprocess.check_output([chrome_path, "--version"]).decode().strip()
             major_version = int(chrome_version.split()[2].split(".")[0])
