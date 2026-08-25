@@ -12,6 +12,8 @@ import undetected_chromedriver as uc
 import time
 import random
 import shutil
+import subprocess
+from shutil import which
 
 from common.pipeline_runs import finish_run, get_run_id, update_run
 
@@ -211,15 +213,20 @@ def create_driver_with_retry(max_retries=5):
 
             logging.info("   Creating driver (attempt {attempt + 1})...")
 
+            chrome_path = which("google-chrome") or "/usr/bin/google-chrome"
+            chrome_version = subprocess.check_output([chrome_path, "--version"]).decode().strip()
+            major_version = int(chrome_version.split()[2].split(".")[0])
+            
             # Create driver with version autodetection
             driver = uc.Chrome(
                 options=options,
-                # version_main=None,  # Auto-detect Chrome version
-                version_main=150,
+                version_main=major_version,   # вместо захардкоженных 150
                 headless=True,
                 use_subprocess=True,
-                driver_executable_path=None,  # Auto-detect driver path
+                driver_executable_path=None,
             )
+
+            
 
             # Configure timeouts - increased for slow connections
             driver.set_page_load_timeout(60)  # Page load timeout
