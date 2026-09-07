@@ -1,7 +1,6 @@
-selenium
-beautifulsoup4
-webdriver-manager
+selenium==4.48.0
+beautifulsoup4==4.15.0
 undetected-chromedriver==3.5.5
-requests
-python-dotenv
-supabase
+requests==2.34.2
+python-dotenv==1.2.3
+supabase==2.31.0
