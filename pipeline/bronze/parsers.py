@@ -216,17 +216,29 @@ def extract_region(soup) -> dict:
     map_block = soup.select_one("[data-block='map']")
     if map_block:
         title_tag = map_block.select_one("[class*='map__title']")
-        if title_tag:
-            return {"region": title_tag.get_text(strip=True)}
+        title_text = title_tag.get_text(strip=True) if title_tag else ""
 
-    # title
+        # "Расположение" is a static section heading, not actual data.
+        # In the old markup the region lived directly in the title,
+        # in the new markup it moved to a sibling map__address element.
+        if title_text and title_text != "Расположение":
+            return {"region": title_text}
+
+        address_tag = map_block.select_one("[class*='map__address']")
+        address_text = address_tag.get_text(strip=True) if address_tag else ""
+        if address_text:
+            return {"region": address_text}
+
+        if title_text:
+            return {"region": title_text}
+
+    # Legacy fallback in case of a different build / stale cached page
     title_tag = soup.select_one("div.styles_map__title__UgISm")
     title_text = title_tag.get_text(strip=True) if title_tag else ""
 
     if title_text and title_text != "Расположение":
         return {"region": title_text}
 
-    # address
     address_tag = soup.select_one("div.styles_map__address__wnNuo")
     if address_tag:
         return {"region": address_tag.get_text(strip=True)}

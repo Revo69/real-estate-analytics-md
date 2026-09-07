@@ -209,17 +209,24 @@ def create_driver_with_retry(max_retries=5):
                 "--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
             )
 
-            logging.info("   Creating driver (attempt {attempt + 1})...")
+            logging.info(f"   Creating driver (attempt {attempt + 1})...")
 
+            from shutil import which
+            import subprocess
+            chrome_path = which("google-chrome") or "/usr/bin/google-chrome"
+            chrome_version = subprocess.check_output([chrome_path, "--version"]).decode().strip()
+            major_version = int(chrome_version.split()[2].split(".")[0])
+            
             # Create driver with version autodetection
             driver = uc.Chrome(
                 options=options,
-                # version_main=None,  # Auto-detect Chrome version
-                version_main=150,
+                version_main=major_version,   # вместо захардкоженных 150
                 headless=True,
                 use_subprocess=True,
-                driver_executable_path=None,  # Auto-detect driver path
+                driver_executable_path=None,
             )
+
+            
 
             # Configure timeouts - increased for slow connections
             driver.set_page_load_timeout(60)  # Page load timeout
