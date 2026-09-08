@@ -208,9 +208,16 @@ The dashboard may summarize the input contract, but it must link to the pipeline
 
 **Produces:** One versioned producer-side database/API contract; the dashboard retains only consumer documentation.
 
-- [ ] **Step 1: Capture current production metadata before moving files**
+- [x] **Step 1: Capture current production metadata before moving files**
 
   Record table/view kinds, columns, primary keys, indexes, RLS status, policies, grants, function definitions, fixed `search_path`, and Security/Performance Advisor results for every internal and `api_*` object. Treat old Markdown row counts as historical snapshots, not current truth.
+
+  Verified read-only on 2026-09-08 against Supabase project `estate-md`
+  (`tfwfvdbatsdncyoibzxp`, PostgreSQL 17.6). The dated evidence is in
+  `docs/production_database_inventory_2026-09-08.md`. No database state was
+  changed. The snapshot also records legacy internal write grants, public
+  refresh-function execution, and duplicate indexes as separate remediation
+  work; none was silently changed during documentation migration.
 
 - [ ] **Step 2: Copy, then reconcile, the deployed API SQL**
 

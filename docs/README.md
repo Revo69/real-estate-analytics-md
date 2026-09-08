@@ -7,6 +7,7 @@ Start with the root documents:
 - [Progress and implementation plan](../PROGRESS.md)
 - [AI-assisted working rules](../AGENTS.md)
 - [Operations runbook](operations.md)
+- [Production database inventory — 2026-09-08](production_database_inventory_2026-09-08.md)
 
 The detailed public `api_*` contract will become
 `docs/public_api_v1.md` when producer-side SQL ownership is moved from the
