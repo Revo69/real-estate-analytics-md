@@ -232,9 +232,17 @@ The dashboard may summarize the input contract, but it must link to the pipeline
   indexes. No SQL was applied to production and no historical script was
   rewritten or consolidated in this step.
 
-- [ ] **Step 3: Create the canonical API contract**
+- [x] **Step 3: Create the canonical API contract**
 
   Move the current contract to `docs/public_api_v1.md`. For each of the ten tables document grain, columns, freshness field, minimum-listing threshold, read permissions, and the refresh function that maintains it.
+
+  Verified 2026-09-08: `docs/public_api_v1.md` is now the producer-owned v1
+  contract. It documents all ten production tables, exact grains and columns,
+  snapshot versus refresh semantics, per-table minimum group sizes, public
+  read-only access, refresh ownership, breaking-change rules, and the current
+  security-remediation caveat. Production category values and the example city
+  filter were checked against aggregated `api_*` rows. No database or dashboard
+  file was changed.
 
 - [ ] **Step 4: Make the base Gold schema reproducible**
 
