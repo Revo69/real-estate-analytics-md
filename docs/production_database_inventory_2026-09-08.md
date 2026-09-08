@@ -233,3 +233,6 @@ be minimized.
    `authenticated`, subject to a separate review before production application.
 5. Treat duplicate-index cleanup as its own change, not part of documentation
    ownership migration.
+
+The byte-for-byte upstream copies and per-script reconciliation are recorded in
+[`sql/api/README.md`](../sql/api/README.md).

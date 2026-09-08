@@ -219,9 +219,18 @@ The dashboard may summarize the input contract, but it must link to the pipeline
   refresh-function execution, and duplicate indexes as separate remediation
   work; none was silently changed during documentation migration.
 
-- [ ] **Step 2: Copy, then reconcile, the deployed API SQL**
+- [x] **Step 2: Copy, then reconcile, the deployed API SQL**
 
   Copy the dashboard SQL scripts into `sql/api/` without deleting the originals. Compare each script against current production definitions. Consolidate only after differences are understood; preserve explicit `GRANT SELECT`, RLS read policies, public-write revocation, and private internal objects.
+
+  Verified 2026-09-08: all nine dashboard SQL files were copied byte-for-byte
+  into `sql/api/`; source/target SHA-256 hashes match and are recorded in
+  `sql/api/README.md`. The originals remain in `Imobil-Index/sql`. Reconciliation
+  identified the chronological function-replacement chain, production's
+  explicit `DELETE ... WHERE TRUE`, incomplete internal privilege revocation,
+  public refresh-function execution, health-check coverage gaps, and duplicate
+  indexes. No SQL was applied to production and no historical script was
+  rewritten or consolidated in this step.
 
 - [ ] **Step 3: Create the canonical API contract**
 
