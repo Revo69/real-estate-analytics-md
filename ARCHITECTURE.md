@@ -97,14 +97,17 @@ The Python aggregator attempts both sales and rent refreshes, collects errors,
 and raises a `RuntimeError` if either refresh fails. The run is marked successful
 and `gold_refreshed=true` only after both RPC calls succeed.
 
-The tracked `pipeline/gold/schema.sql` is currently older than the deployed
-Gold/API implementation. Reconciliation is an explicit next task; this document
-does not treat the old file as a complete production schema.
+The tracked `pipeline/gold/schema.sql` now bootstraps the five internal Gold
+objects with the production filters and thresholds inspected on 2026-09-08. It
+also records the required, non-alphabetical `sql/api` rollout order. It is a
+clean-environment bootstrap source, not an automatic migration for an existing
+database; live definitions must still be compared before applying changes.
 
 ### Public API
 
 - **Main objects:** ten aggregated `api_*` tables
 - **Consumer:** `Imobil-Index/dashboard_data.py`
+- **Canonical contract:** `docs/public_api_v1.md`
 
 The public API is a security and ownership boundary, not another raw data layer.
 Public consumers receive only aggregated metrics. Public roles have read-only

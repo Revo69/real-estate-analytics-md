@@ -59,7 +59,7 @@
 - [x] The pipeline now has canonical root documentation and an operations runbook; detailed API/SQL ownership remains Task 2.
 - [ ] Pipeline parser/normalizer tests are not run on push or pull request.
 - [ ] `tests/test_transformer.py` is empty and Silver normalizers/quality thresholds lack regression coverage.
-- [ ] `pipeline/gold/schema.sql` describes only an older sales subset and cannot recreate the present production Gold/API layer.
+- [x] `pipeline/gold/schema.sql` now bootstraps the five current Gold objects and identifies the complete ordered API rollout; existing-database migration and API security remediation remain separate reviewed work.
 - [ ] `pipeline/silver/loader.py` re-reads and upserts all Bronze rows each day. This is acceptable at the present scale but is not truly incremental.
 - [ ] The link-page wait proves that at least one listing loaded, not that the page reached a stable listing count.
 - [ ] Python 3.12+ removes `distutils`, while `undetected-chromedriver 3.5.5` imports it at runtime. Keep production on Python 3.11 until the browser layer passes an isolated import check and a no-write 999.md page smoke test on Python 3.14.
@@ -244,9 +244,19 @@ The dashboard may summarize the input contract, but it must link to the pipeline
   filter were checked against aggregated `api_*` rows. No database or dashboard
   file was changed.
 
-- [ ] **Step 4: Make the base Gold schema reproducible**
+- [x] **Step 4: Make the base Gold schema reproducible**
 
   Rewrite `pipeline/gold/schema.sql` so it no longer suggests that the current system contains only the sales materialized view. It may reference ordered scripts under `sql/api/`, but a clean operator must be able to identify every required Gold/API object and execution order.
+
+  Verified 2026-09-08: `pipeline/gold/schema.sql` now bootstraps both daily
+  tables, both current materialized views, the security-invoker gross-yield
+  view, production filters/thresholds, Gold indexes, RLS, and explicit internal
+  grants. It lists all ten required public API objects and the non-alphabetical
+  SQL execution order. Existing environments still require metadata comparison;
+  `IF NOT EXISTS` is not presented as a migration mechanism. No SQL was applied
+  to production. Static object/filter/access checks and `git diff --check`
+  passed. DDL execution remains unverified because this checkout has no local
+  PostgreSQL/`psql`; production was not used as a test database.
 
 - [ ] **Step 5: Cut dashboard documentation to consumer scope**
 
