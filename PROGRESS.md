@@ -258,9 +258,19 @@ The dashboard may summarize the input contract, but it must link to the pipeline
   passed. DDL execution remains unverified because this checkout has no local
   PostgreSQL/`psql`; production was not used as a test database.
 
-- [ ] **Step 5: Cut dashboard documentation to consumer scope**
+- [x] **Step 5: Cut dashboard documentation to consumer scope**
 
   Correct the dashboard's `AGENTS.md` and `PROGRESS.md` statements that it reads Gold directly. Keep a short `api_*` consumption summary and link to the upstream canonical contract.
+
+  Verified 2026-09-10 in `Imobil-Index`: `README.md`, `AGENTS.md`,
+  `PROGRESS.md`, and `ARCHITECTURE.md` now describe the dashboard as an
+  `api_*` consumer and link to this repository's canonical contract. Current
+  Gold-read and producer-ownership claims were removed; legacy SQL/API files
+  remain explicitly marked for the separate parity/removal step. All 15
+  dashboard unit tests pass, documented Ruff scope (`app.py`) passes with
+  `--no-cache`, and `git diff --check` passes. Full-repository Ruff still finds
+  the pre-existing broad `Exception` catch in `wake_streamlit.py`; it was not
+  changed during this documentation-only step.
 
 - [ ] **Step 6: Verify the public boundary**
 
