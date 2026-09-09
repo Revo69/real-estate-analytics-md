@@ -276,6 +276,34 @@ The dashboard may summarize the input contract, but it must link to the pipeline
 
   Run the existing API health script from `Imobil-Index`, then verify with anon credentials that all ten `api_*` tables are readable and internal Raw/Bronze/Silver/Gold objects and public writes remain unavailable. Run database advisors after any SQL change.
 
+  Partial verification on 2026-09-10 against production `estate-md`:
+
+  - the dashboard credential is an `anon` key; its health check read all ten
+    non-empty `api_*` tables, with the latest snapshot dated 2026-09-09;
+  - all ten API tables have RLS, public SELECT grants and SELECT policies, and
+    no INSERT/UPDATE/DELETE/TRUNCATE privileges for `anon` or `authenticated`;
+  - direct anon REST reads of Raw, Bronze, Silver, Gold, and `pipeline_runs`
+    were all rejected with PostgreSQL code `42501`; service-role SELECT remains
+    available;
+  - the boundary is not yet least-privilege: `anon` and `authenticated` retain
+    broad non-SELECT table privileges on Raw/Bronze/Silver and several Gold
+    objects. RLS with no policies blocks Data API row writes today, but the
+    redundant grants should still be revoked;
+  - `refresh_gold_estate()` and `refresh_gold_rent()` are security-invoker
+    functions with a fixed `search_path`, but `anon` and `authenticated` still
+    have EXECUTE. Do not expose pipeline refresh RPCs publicly;
+  - default privileges for both `postgres` and `supabase_admin` still grant
+    broad table, sequence, and function access to public roles, so future
+    objects can inherit the same problem;
+  - the security advisor reported only six informational
+    `rls_enabled_no_policy` findings for intentionally closed internal tables.
+    The performance advisor reported eight duplicate-index groups plus unused
+    indexes; treat index cleanup as a separate reviewed task.
+
+  No SQL, grants, functions, or production data were changed during this
+  verification. Keep Step 6 open until a versioned least-privilege hardening
+  script is reviewed, applied manually, and these checks are rerun.
+
 - [ ] **Step 7: Remove duplicate producer files from the dashboard**
 
   Delete dashboard SQL/API design duplicates only after the upstream copy, links, and production parity checks pass. The deletion must be a separate reviewable commit so rollback is simple.
