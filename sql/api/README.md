@@ -26,6 +26,18 @@ sorting.
 9. `add_estate_floor_position_api_layer.sql`
 10. `check_public_api_layer.sql` — run again after the additions
 
+## Producer-owned corrective scripts
+
+The files below were created in this repository after the historical dashboard
+copy. They are not included in the copy hashes above and must be reviewed and
+applied separately.
+
+1. `harden_public_boundary.sql` — revoke redundant public privileges from
+   internal relations and refresh functions, then make new postgres-owned
+   objects private by default.
+2. `check_public_api_layer.sql` — run after hardening; its access sections must
+   return only `OK` before Step 6 is complete.
+
 ## Copy verification
 
 | File | SHA-256 |
@@ -70,4 +82,3 @@ The comparison source is the read-only production snapshot in
 - Duplicate-index removal is a separate performance migration. It is not mixed
   into the ownership move.
 - No copied script was applied to production during this reconciliation.
-

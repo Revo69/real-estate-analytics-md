@@ -232,7 +232,8 @@ commit;
 -- 6. sql/api/add_estate_housing_type_api_layer.sql
 -- 7. sql/api/add_estate_condition_api_layer.sql
 -- 8. sql/api/add_estate_floor_position_api_layer.sql
--- 9. sql/api/check_public_api_layer.sql (verification only)
+-- 9. sql/api/harden_public_boundary.sql
+-- 10. sql/api/check_public_api_layer.sql (verification only)
 --
 -- Required API objects:
 -- api_estate_current, api_estate_daily,

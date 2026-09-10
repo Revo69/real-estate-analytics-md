@@ -415,28 +415,59 @@ with internal_objects(object_name) as (
         ('public.gold_rent_daily'),
         ('public.gold_estate_current'),
         ('public.gold_rent_current'),
-        ('public.gold_rent_yield')
+        ('public.gold_rent_yield'),
+        ('public.pipeline_runs')
+),
+access_checks as (
+    select
+        object_name,
+        has_table_privilege('anon', object_name, 'select') as anon_select,
+        has_table_privilege(
+            'authenticated',
+            object_name,
+            'select'
+        ) as authenticated_select,
+        has_table_privilege('service_role', object_name, 'select')
+            as service_select,
+        has_table_privilege('anon', object_name, 'insert')
+            or has_table_privilege('anon', object_name, 'update')
+            or has_table_privilege('anon', object_name, 'delete')
+            or has_table_privilege('anon', object_name, 'truncate')
+            or has_table_privilege('anon', object_name, 'references')
+            or has_table_privilege('anon', object_name, 'trigger')
+            or has_table_privilege('anon', object_name, 'maintain')
+            as anon_non_select,
+        has_table_privilege('authenticated', object_name, 'insert')
+            or has_table_privilege('authenticated', object_name, 'update')
+            or has_table_privilege('authenticated', object_name, 'delete')
+            or has_table_privilege('authenticated', object_name, 'truncate')
+            or has_table_privilege('authenticated', object_name, 'references')
+            or has_table_privilege('authenticated', object_name, 'trigger')
+            or has_table_privilege('authenticated', object_name, 'maintain')
+            as authenticated_non_select
+    from internal_objects
 )
 select
     object_name,
     case
-        when not has_table_privilege('anon', object_name, 'select')
-             and not has_table_privilege('authenticated', object_name, 'select')
-             and has_table_privilege('service_role', object_name, 'select')
+        when not anon_select
+             and not authenticated_select
+             and not anon_non_select
+             and not authenticated_non_select
+             and service_select
         then 'OK'
         else 'CHECK'
     end as status,
-    has_table_privilege('anon', object_name, 'select') as anon_select,
-    has_table_privilege(
-        'authenticated',
-        object_name,
-        'select'
-    ) as authenticated_select,
-    has_table_privilege('service_role', object_name, 'select') as service_select
-from internal_objects
+    anon_select,
+    authenticated_select,
+    anon_non_select,
+    authenticated_non_select,
+    service_select
+from access_checks
 order by object_name;
 
--- 5. Refresh functions should sync API tables and keep a fixed search_path.
+-- 5. Refresh functions should stay private, use invoker rights, sync API
+-- tables, and keep a fixed search_path.
 with functions(function_name, expected_api_marker) as (
     values
         ('refresh_gold_estate', 'api_estate_current'),
@@ -445,9 +476,16 @@ with functions(function_name, expected_api_marker) as (
 function_checks as (
     select
         f.function_name,
+        p.oid,
+        not p.prosecdef as security_invoker,
         p.proconfig,
         lower(pg_get_functiondef(p.oid)) as function_definition,
-        f.expected_api_marker
+        f.expected_api_marker,
+        has_function_privilege('anon', p.oid, 'execute') as anon_execute,
+        has_function_privilege('authenticated', p.oid, 'execute')
+            as authenticated_execute,
+        has_function_privilege('service_role', p.oid, 'execute')
+            as service_execute
     from functions f
     join pg_proc p on p.proname = f.function_name
     join pg_namespace n on n.oid = p.pronamespace
@@ -456,7 +494,11 @@ function_checks as (
 select
     function_name,
     case
-        when proconfig @> array['search_path=public, pg_temp']
+        when security_invoker
+             and not anon_execute
+             and not authenticated_execute
+             and service_execute
+             and proconfig @> array['search_path=public, pg_temp']
              and position(expected_api_marker in function_definition) > 0
              and position('api_rent_yield' in function_definition) > 0
              and (
@@ -493,6 +535,10 @@ select
         then 'OK'
         else 'CHECK'
     end as status,
+    security_invoker,
+    anon_execute,
+    authenticated_execute,
+    service_execute,
     proconfig,
     position(expected_api_marker in function_definition) > 0 as updates_main_api,
     position('api_estate_segments_current' in function_definition) > 0
@@ -509,3 +555,38 @@ select
     position('truncate table' in function_definition) > 0 as uses_truncate
 from function_checks
 order by function_name;
+
+-- 6. New producer-owned objects should not inherit public access. Supabase
+-- platform objects owned by supabase_admin are outside this repository's ACL.
+with expected_defaults(object_type, object_label) as (
+    values
+        ('r'::"char", 'tables'),
+        ('S'::"char", 'sequences'),
+        ('f'::"char", 'functions')
+),
+default_access_checks as (
+    select
+        e.object_label,
+        exists (
+            select 1
+            from pg_default_acl d
+            join pg_roles owner_role on owner_role.oid = d.defaclrole
+            join pg_namespace n on n.oid = d.defaclnamespace
+            cross join lateral aclexplode(d.defaclacl) a
+            left join pg_roles grantee_role on grantee_role.oid = a.grantee
+            where owner_role.rolname = 'postgres'
+              and n.nspname = 'public'
+              and d.defaclobjtype = e.object_type
+              and (
+                  a.grantee = 0
+                  or grantee_role.rolname in ('anon', 'authenticated')
+              )
+        ) as has_public_default
+    from expected_defaults e
+)
+select
+    object_label,
+    case when not has_public_default then 'OK' else 'CHECK' end as status,
+    has_public_default
+from default_access_checks
+order by object_label;

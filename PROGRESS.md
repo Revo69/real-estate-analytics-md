@@ -304,6 +304,14 @@ The dashboard may summarize the input contract, but it must link to the pipeline
   verification. Keep Step 6 open until a versioned least-privilege hardening
   script is reviewed, applied manually, and these checks are rerun.
 
+  Repository remediation prepared on 2026-09-10, not applied to production:
+  `sql/api/harden_public_boundary.sql` revokes the verified redundant ACLs and
+  hardens defaults for future postgres-owned objects. The canonical
+  `check_public_api_layer.sql` now also checks internal non-SELECT privileges,
+  `pipeline_runs`, refresh-function execution/security mode, and producer-owned
+  default privileges. Its new checks correctly report the current production
+  state as `CHECK`; Step 6 therefore remains open.
+
 - [ ] **Step 7: Remove duplicate producer files from the dashboard**
 
   Delete dashboard SQL/API design duplicates only after the upstream copy, links, and production parity checks pass. The deletion must be a separate reviewable commit so rollback is simple.
