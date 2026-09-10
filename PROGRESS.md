@@ -272,7 +272,7 @@ The dashboard may summarize the input contract, but it must link to the pipeline
   the pre-existing broad `Exception` catch in `wake_streamlit.py`; it was not
   changed during this documentation-only step.
 
-- [ ] **Step 6: Verify the public boundary**
+- [x] **Step 6: Verify the public boundary**
 
   Run the existing API health script from `Imobil-Index`, then verify with anon credentials that all ten `api_*` tables are readable and internal Raw/Bronze/Silver/Gold objects and public writes remain unavailable. Run database advisors after any SQL change.
 
@@ -301,8 +301,8 @@ The dashboard may summarize the input contract, but it must link to the pipeline
     indexes; treat index cleanup as a separate reviewed task.
 
   No SQL, grants, functions, or production data were changed during this
-  verification. Keep Step 6 open until a versioned least-privilege hardening
-  script is reviewed, applied manually, and these checks are rerun.
+  initial verification. Step 6 stayed open until a versioned least-privilege
+  hardening script was reviewed, applied manually, and the checks were rerun.
 
   Repository remediation prepared on 2026-09-10, not applied to production:
   `sql/api/harden_public_boundary.sql` revokes the verified redundant ACLs and
@@ -310,7 +310,27 @@ The dashboard may summarize the input contract, but it must link to the pipeline
   `check_public_api_layer.sql` now also checks internal non-SELECT privileges,
   `pipeline_runs`, refresh-function execution/security mode, and producer-owned
   default privileges. Its new checks correctly report the current production
-  state as `CHECK`; Step 6 therefore remains open.
+  state before hardening as `CHECK`; Step 6 remained open at that point.
+
+  Applied manually and verified on 2026-09-10:
+
+  - all ten API tables pass the RLS, SELECT-policy, read-grant, and public-write
+    denial checks;
+  - all nine internal objects have no `anon`/`authenticated` table privileges,
+    retain service-role SELECT, and reject direct anon REST reads with `42501`;
+  - both refresh functions remain security-invoker with a fixed `search_path`,
+    reject public execution, and retain service-role execution;
+  - table, sequence, and function defaults for new postgres-owned objects no
+    longer grant access to public roles;
+  - the anon health check reads all ten non-empty API tables, with current
+    snapshots dated 2026-09-10;
+  - the security advisor has no warning/error findings. Its six INFO notices
+    are the expected no-policy state for closed internal RLS tables;
+  - the performance advisor still reports 32 unused-index notices and eight
+    duplicate-index groups. That cleanup remains a separate reviewed task.
+
+  Step 6 is complete. No application data or API contract changed during the
+  hardening.
 
 - [ ] **Step 7: Remove duplicate producer files from the dashboard**
 
