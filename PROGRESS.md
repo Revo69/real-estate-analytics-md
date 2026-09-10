@@ -388,7 +388,7 @@ The dashboard may summarize the input contract, but it must link to the pipeline
 
 **Produces:** A deterministic pull-request gate that does not require Supabase secrets or a live browser.
 
-- [ ] **Step 1: Declare minimal dev tooling**
+- [x] **Step 1: Declare minimal dev tooling**
 
   Add only:
 
@@ -398,6 +398,15 @@ The dashboard may summarize the input contract, but it must link to the pipeline
   ```
 
   Keep runtime dependencies in `requirements.txt`; do not add dbt, Polars, or DuckDB.
+
+  Verified 2026-09-10: `requirements-dev.txt` contains only the current exact
+  PyPI releases `pytest==9.1.1` and `ruff==0.16.6`. Both support Python 3.11;
+  runtime dependencies remain unchanged in `requirements.txt`. A no-install
+  resolver check for the new file passed with
+  `python -m pip install --dry-run --ignore-installed --python-version 3.11
+  --only-binary=:all: -r requirements-dev.txt`. The local machine has Python
+  3.14.6 but no `py` launcher or Python 3.11 interpreter, so execution of the
+  test suite under 3.11 remains part of the planned CI verification.
 
 - [ ] **Step 2: Add normalizer and quality tests**
 
