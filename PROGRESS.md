@@ -332,9 +332,29 @@ The dashboard may summarize the input contract, but it must link to the pipeline
   Step 6 is complete. No application data or API contract changed during the
   hardening.
 
-- [ ] **Step 7: Remove duplicate producer files from the dashboard**
+- [x] **Step 7: Remove duplicate producer files from the dashboard**
 
   Delete dashboard SQL/API design duplicates only after the upstream copy, links, and production parity checks pass. The deletion must be a separate reviewable commit so rollback is simple.
+
+  Verified and removed on 2026-09-10 in `Imobil-Index`:
+
+  - all nine dashboard SQL files had upstream copies; eight were byte-for-byte
+    identical, while the original checker hash remains recorded upstream and
+    its canonical producer copy now contains the additional hardening checks;
+  - the dashboard API document was a subset of the canonical upstream contract;
+  - housing-type, condition, and floor-position producer rules remain in the
+    upstream contract and versioned SQL, while their implemented UI behavior
+    remains in dashboard code and its historical progress log;
+  - removed four producer/API documents and nine SQL files from the dashboard;
+    retained the dashboard-specific design plan under `docs/superpowers/`;
+  - updated dashboard `ARCHITECTURE.md` and `PROGRESS.md`; root documentation
+    continues to link to the canonical upstream API contract;
+  - all 15 dashboard unit tests, compilation of the active Python modules,
+    focused Ruff checks, and `git diff --check` pass.
+
+  The pipeline contract and SQL provenance document were also updated to
+  describe the verified 2026-09-10 hardening state. No Streamlit behavior,
+  public API contract, or production database object changed in Step 7.
 
 - [ ] **Step 8: Commit producer and consumer changes separately**
 

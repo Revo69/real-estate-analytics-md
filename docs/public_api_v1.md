@@ -2,8 +2,9 @@
 
 This is the canonical producer-side public data contract owned by
 `real-estate-analytics-md`. `Imobil-Index` is its current Streamlit consumer.
-The contract was reconciled with production on 2026-09-08; current row counts
-and dates must be queried rather than copied into documentation.
+The contract and access boundary were verified against production on
+2026-09-10; current row counts and dates must be queried rather than copied
+into documentation.
 
 The API exposes only aggregated real estate analytics from Moldova. It does not
 expose raw listings, source links, seller data, phone numbers, or internal
@@ -381,9 +382,8 @@ should have the latest snapshot date.
 
 The functions are an internal producer interface, not a public dashboard API.
 They must remain `SECURITY INVOKER`, use a fixed `search_path`, and be executable
-only by the pipeline's private producer role. The 2026-09-08 inventory found
-legacy public `EXECUTE` grants; removing those grants is tracked as a separate
-reviewed SQL change and is not hidden by this documentation update.
+only by the pipeline's private producer role. This execution boundary was
+hardened and verified on 2026-09-10.
 
 ## Access Rules
 
@@ -393,12 +393,13 @@ reviewed SQL change and is not hidden by this documentation update.
 - Row-level security is enabled on public API tables, with read-only SELECT
   policies for `anon` and `authenticated`.
 
-The intended boundary above is stricter than the 2026-09-08 production grant
-snapshot: several internal objects retain legacy non-SELECT grants while being
-blocked by RLS/no-policy behavior. See
+The least-privilege boundary was applied and verified on 2026-09-10 with
+[`sql/api/harden_public_boundary.sql`](../sql/api/harden_public_boundary.sql).
+The earlier
 [`production_database_inventory_2026-09-08.md`](production_database_inventory_2026-09-08.md)
-for the evidence and remediation scope.
+remains a dated pre-hardening snapshot.
 
 Run [`sql/api/check_public_api_layer.sql`](../sql/api/check_public_api_layer.sql)
-after pipeline or security changes. Its currently known coverage gaps are
-recorded in [`sql/api/README.md`](../sql/api/README.md).
+after pipeline or security changes. It verifies public table grants/RLS,
+internal relation privileges, refresh-function execution and security mode,
+and defaults for new producer-owned objects.

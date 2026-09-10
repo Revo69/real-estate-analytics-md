@@ -67,15 +67,13 @@ The comparison source is the read-only production snapshot in
 | `add_estate_housing_type_api_layer.sql` | Current table and profile block are present. Its function body was superseded by condition and floor additions. | Preserve history. |
 | `add_estate_condition_api_layer.sql` | Current constrained table and normalized condition block are present. This is the base of the latest function before the floor patch. | Preserve history; retain the normalized category contract. |
 | `add_estate_floor_position_api_layer.sql` | Current constrained table and floor-position block are present. The script edits the existing function text dynamically, so it depends on the exact preceding body. | Preserve history, but replace the dynamic patch with an explicit complete function in canonical SQL. |
-| `check_public_api_layer.sql` | Covers all ten API tables, public read/write expectations, fixed search paths, and refresh markers. It does not test internal write privileges, `pipeline_runs`, function `EXECUTE` ACLs, or `SECURITY INVOKER`. | Extend during boundary verification; retain as the current historical health check for now. |
+| `check_public_api_layer.sql` | The original copied version covered all ten API tables, public read/write expectations, fixed search paths, and refresh markers. The producer-owned version was extended on 2026-09-10 to cover internal non-SELECT privileges, `pipeline_runs`, function execution/security mode, and postgres-owned default privileges. | Use the extended producer copy as the canonical verification query. |
 
-## Known security and reproducibility gaps
+## Security and reproducibility status
 
-- Internal `anon/authenticated` write grants must be revoked explicitly; RLS is
-  defense in depth, not a substitute for least-privilege grants.
-- `EXECUTE` on both refresh functions must be revoked from `PUBLIC`, `anon`, and
-  `authenticated`, then granted only to the producer role that actually calls
-  them.
+- `harden_public_boundary.sql` was applied manually and verified on 2026-09-10.
+  Internal public grants, refresh-function execution, and postgres-owned
+  defaults now pass the canonical access checks.
 - Complete canonical function bodies must use fixed `search_path`, remain
   `SECURITY INVOKER`, and use `DELETE ... WHERE TRUE` only for intentional
   full-table replacement.
