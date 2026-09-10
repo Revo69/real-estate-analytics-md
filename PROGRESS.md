@@ -356,7 +356,7 @@ The dashboard may summarize the input contract, but it must link to the pipeline
   describe the verified 2026-09-10 hardening state. No Streamlit behavior,
   public API contract, or production database object changed in Step 7.
 
-- [ ] **Step 8: Commit producer and consumer changes separately**
+- [x] **Step 8: Commit producer and consumer changes separately**
 
   Suggested commits:
 
@@ -365,6 +365,12 @@ The dashboard may summarize the input contract, but it must link to the pipeline
   docs(dashboard): link to upstream API contract
   chore(dashboard): remove duplicated producer SQL documentation
   ```
+
+  Verified on 2026-09-10: the producer-side ownership, hardening, and progress
+  changes are committed in this repository at `fbc1ee3`; the dashboard cleanup
+  is committed separately in `Imobil-Index` at `9dbeadc`. Both working trees
+  were clean after the commits, and the dashboard's consumer-side
+  `scripts/check_api_health.py` remains tracked.
 
 ---
 
