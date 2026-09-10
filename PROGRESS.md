@@ -33,7 +33,8 @@
 - [x] The ten public `api_*` tables are non-empty and fresh to 2026-09-07.
 - [x] The 27 tracked Python files in the pipeline pass an AST syntax parse.
 - [x] The dashboard passes 15 unit tests and Ruff.
-- [ ] The pipeline pytest suite is not currently runnable from a clean project setup because pytest/dev tooling is not declared and no test workflow exists.
+- [x] Exact pytest/Ruff dev tooling is declared and the local suite passes 64 tests without Supabase credentials.
+- [ ] The new test workflow has not yet been verified by a real GitHub Actions run.
 
 ### Work already implemented — do not redo
 
@@ -380,6 +381,7 @@ The dashboard may summarize the input contract, but it must link to the pipeline
 **Files:**
 
 - Create: `requirements-dev.txt`
+- Create: `ruff.toml`
 - Create: `.github/workflows/test.yml`
 - Modify: `tests/test_transformer.py`
 - Create: `tests/test_normalizers.py`
@@ -448,9 +450,20 @@ The dashboard may summarize the input contract, but it must link to the pipeline
   focused tests pass, the full suite passes `64 passed`, and Ruff passes for
   both new files. Production code was not changed.
 
-- [ ] **Step 5: Add the PR workflow**
+- [x] **Step 5: Add the PR workflow**
 
   Trigger on `push` to `main`, `pull_request`, and `workflow_dispatch`. Use Python 3.11, install runtime plus dev requirements, run Ruff, compile tracked Python modules, and execute `pytest -q`. Do not provide Supabase or Telegram secrets.
+
+  Prepared and verified locally on 2026-09-10: `.github/workflows/test.yml`
+  defines the read-only `Test pipeline logic` job for pushes to `main`, pull
+  requests, and manual runs. It uses Python 3.11, pip caching, both requirement
+  files, repository-wide Ruff, compilation of all tracked Python directories,
+  and pytest, with no secrets or live services. `ruff.toml` establishes a
+  reproducible Python 3.11 baseline using core `E4`, `E7`, `E9`, and `F` rules;
+  the broader Ruff rules currently expose 157 legacy findings and were not
+  silently presented as fixed. The workflow YAML parses successfully, local
+  Ruff and compilation pass, and the full suite passes `64 passed`. A real
+  GitHub Actions run remains Step 6.
 
 - [ ] **Step 6: Verify locally and in GitHub Actions**
 
