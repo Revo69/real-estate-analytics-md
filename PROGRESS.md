@@ -58,7 +58,8 @@
 - [ ] The pipeline repository does not contain the complete production `api_*` SQL/refresh contract; its current copies live under `Imobil-Index/sql`.
 - [x] The pipeline now has canonical root documentation and an operations runbook; detailed API/SQL ownership remains Task 2.
 - [ ] Pipeline parser/normalizer tests are not run on push or pull request.
-- [ ] `tests/test_transformer.py` is empty and Silver normalizers/quality thresholds lack regression coverage.
+- [x] Silver transformation, normalizer, quality-score, and status-threshold contracts now have deterministic regression coverage.
+- [ ] `calculate_quality_score()` reads a missing `region` key while Silver transformation emits `region_raw` plus parsed address fields; fully populated transformed rows therefore currently top out at `0.875`. Any correction requires an explicit Silver data-semantics change and regression update.
 - [x] `pipeline/gold/schema.sql` now bootstraps the five current Gold objects and identifies the complete ordered API rollout; existing-database migration and API security remediation remain separate reviewed work.
 - [ ] `pipeline/silver/loader.py` re-reads and upserts all Bronze rows each day. This is acceptable at the present scale but is not truly incremental.
 - [ ] The link-page wait proves that at least one listing loaded, not that the page reached a stable listing count.
@@ -420,9 +421,18 @@ The dashboard may summarize the input contract, but it must link to the pipeline
   passes `59 passed`; Ruff passes for the new file. Production normalization
   behavior was not changed.
 
-- [ ] **Step 3: Test Silver transformation contracts**
+- [x] **Step 3: Test Silver transformation contracts**
 
   Fill `tests/test_transformer.py` with representative Bronze dictionaries and assert typed Silver fields, preservation of `region_raw`, empty JSON handling, and normalization status. Mock no transformation logic.
+
+  Verified 2026-09-10: `tests/test_transformer.py` exercises a representative
+  Bronze tuple through the real `transform_record()` function and covers typed
+  dates, prices, dimensions, address fields, features, `region_raw`, quality
+  score, and normalization status. A second case verifies empty/null JSON
+  handling and the `failed` result. Only `supabase.create_client` is patched
+  during module import so the tests require no credentials or network; no
+  transformation function is mocked. The focused file passes `2 passed`, the
+  full suite passes `61 passed`, and Ruff passes for the changed test file.
 
 - [ ] **Step 4: Test failure propagation and metadata without network**
 
