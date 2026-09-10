@@ -63,7 +63,7 @@ remain private.
 | Storage and API | Supabase, PostgreSQL, PostgREST |
 | Orchestration | GitHub Actions |
 | Runtime | Python 3.11 |
-| Tests | pytest parser regression suite |
+| Tests | pytest regression suite and Ruff |
 | Consumer | Imobil.Index with Streamlit and Plotly |
 
 Python 3.11 remains the production runtime because
@@ -119,6 +119,7 @@ py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
+python -m pip install -r requirements-dev.txt
 ```
 
 On systems without the Windows Python launcher, replace `py -3.11` with the
@@ -183,16 +184,17 @@ boundaries are documented in the
 
 ## Checks
 
-Run the existing deterministic parser tests:
+Run the same deterministic checks used by the pull-request workflow:
 
 ```powershell
+python -m ruff check .
+python -m compileall -q common pipeline scripts tests utils
 python -m pytest -q
 ```
 
-The repository does not yet declare pytest as a development dependency or run
-the suite in a pull-request workflow. Until that planned task is completed, do
-not report a clean checkout as tested unless the required test tooling was
-installed and the command above completed successfully.
+The `Test pipeline logic` workflow runs these checks on pushes to `main`, pull
+requests, and manual dispatches using Python 3.11. It requires no Supabase or
+Telegram secrets and does not open a browser.
 
 ---
 
@@ -202,8 +204,9 @@ installed and the command above completed successfully.
 - Silver currently reprocesses the complete Bronze dataset.
 - Bronze and Silver counters in `pipeline_runs` are not populated yet.
 - Interrupted historical workflows can leave stale `running` records.
-- The complete deployed Gold/API SQL contract still needs to move from the
-  dashboard repository into this producer repository.
+- The current Silver quality score still checks a legacy `region` key instead
+  of the emitted address fields, so transformed records currently top out at
+  `0.875` until that data-semantics correction is reviewed.
 - Python 3.12+ is blocked by the current browser dependency until a tested
   compatibility strategy replaces the `distutils` import.
 
@@ -217,10 +220,8 @@ The prioritized implementation sequence and verification evidence live in
 - [Architecture](ARCHITECTURE.md)
 - [Progress and implementation plan](PROGRESS.md)
 - [Operations runbook](docs/operations.md)
+- [Public API v1 contract](docs/public_api_v1.md)
 - [Documentation index](docs/README.md)
-
-The detailed `api_*` contract will become `docs/public_api_v1.md` when
-producer-side SQL ownership is reconciled and moved from `Imobil-Index`.
 
 ---
 

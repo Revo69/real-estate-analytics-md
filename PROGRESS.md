@@ -23,18 +23,18 @@
 
 ---
 
-## Verified Baseline — 2026-09-08
+## Verified Baseline — 2026-09-10
 
 ### Repository and runtime
 
-- [x] `real-estate-analytics-md` is clean on `main` and matches `origin/main` at `3f78223`.
-- [x] `Imobil-Index` is clean on `main` and matches `origin/main` at `fd00f13`; the experimental reference redesign was reverted.
+- [x] `real-estate-analytics-md` matched `origin/main` at `ade67fd` before the current verified README/PROGRESS synchronization.
+- [x] `Imobil-Index` is clean on `main` and matches `origin/main` at `9dbeadc`; producer SQL/documentation duplicates are removed.
 - [x] The five most recent public `Real Estate Pipeline` workflow runs completed successfully.
-- [x] The ten public `api_*` tables are non-empty and fresh to 2026-09-07.
-- [x] The 27 tracked Python files in the pipeline pass an AST syntax parse.
+- [x] The ten public `api_*` tables are non-empty and fresh to 2026-09-10.
+- [x] The 30 tracked Python files in the pipeline compile successfully.
 - [x] The dashboard passes 15 unit tests and Ruff.
 - [x] Exact pytest/Ruff dev tooling is declared and the local suite passes 64 tests without Supabase credentials.
-- [ ] The new test workflow has not yet been verified by a real GitHub Actions run.
+- [x] The `Test pipeline logic` workflow passed on Python 3.11 for commit `ade67fd`.
 
 ### Work already implemented — do not redo
 
@@ -56,9 +56,9 @@
 
 - [ ] `bronze_loaded`, `silver_success`, `silver_partial`, `silver_failed`, and `rejected_count` remain zero in recent successful `pipeline_runs` rows because loaders never update them.
 - [ ] Eight old runs from 2026-08-04 through 2026-08-18 remain incorrectly marked `running`.
-- [ ] The pipeline repository does not contain the complete production `api_*` SQL/refresh contract; its current copies live under `Imobil-Index/sql`.
+- [x] The pipeline repository owns the complete versioned Gold/API SQL and canonical public contract; dashboard producer duplicates were removed.
 - [x] The pipeline now has canonical root documentation and an operations runbook; detailed API/SQL ownership remains Task 2.
-- [ ] Pipeline parser/normalizer tests are not run on push or pull request.
+- [x] Pipeline regression tests and Ruff run on pushes to `main`, pull requests, and manual dispatches.
 - [x] Silver transformation, normalizer, quality-score, and status-threshold contracts now have deterministic regression coverage.
 - [ ] `calculate_quality_score()` reads a missing `region` key while Silver transformation emits `region_raw` plus parsed address fields; fully populated transformed rows therefore currently top out at `0.875`. Any correction requires an explicit Silver data-semantics change and regression update.
 - [x] `pipeline/gold/schema.sql` now bootstraps the five current Gold objects and identifies the complete ordered API rollout; existing-database migration and API security remediation remain separate reviewed work.
@@ -465,7 +465,7 @@ The dashboard may summarize the input contract, but it must link to the pipeline
   Ruff and compilation pass, and the full suite passes `64 passed`. A real
   GitHub Actions run remains Step 6.
 
-- [ ] **Step 6: Verify locally and in GitHub Actions**
+- [x] **Step 6: Verify locally and in GitHub Actions**
 
   ```powershell
   python -m pip install -r requirements.txt -r requirements-dev.txt
@@ -475,6 +475,13 @@ The dashboard may summarize the input contract, but it must link to the pipeline
   ```
 
   Expected: all commands pass; the GitHub `Test pipeline logic` workflow is green on the branch/PR.
+
+  Verified 2026-09-10: the local Python 3.14.6 environment passes Ruff,
+  compilation, and all 64 tests with empty Supabase credentials. Public GitHub
+  Actions run `34528510090` then passed on `main` for commit `ade67fd` using
+  Python 3.11. Its checkout, setup, dependency installation, Ruff, compilation,
+  and pytest steps all completed successfully. The run is available at
+  `https://github.com/Revo69/real-estate-analytics-md/actions/runs/34528510090`.
 
 - [ ] **Step 7: Commit**
 
