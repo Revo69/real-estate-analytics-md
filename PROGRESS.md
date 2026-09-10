@@ -434,9 +434,19 @@ The dashboard may summarize the input contract, but it must link to the pipeline
   transformation function is mocked. The focused file passes `2 passed`, the
   full suite passes `61 passed`, and Ruff passes for the changed test file.
 
-- [ ] **Step 4: Test failure propagation and metadata without network**
+- [x] **Step 4: Test failure propagation and metadata without network**
 
   Mock only the Supabase client boundary. Assert that one failed Gold RPC raises `RuntimeError`, a successful Gold refresh sets `gold_refreshed=True`, and `finish_run` records the correct terminal fields.
+
+  Verified 2026-09-10 with empty Supabase credentials:
+  `tests/test_gold_failure.py` proves that one failed RPC produces a
+  `RuntimeError` while the other refresh is still attempted, and that a
+  successful Gold loader records `gold_refreshed=True` before finishing the
+  run as succeeded. `tests/test_pipeline_runs.py` verifies the failed terminal
+  payload, cleared `current_stage`, diagnostic fields, UTC `finished_at`, run
+  filter, and execution through a mocked Supabase client boundary. The three
+  focused tests pass, the full suite passes `64 passed`, and Ruff passes for
+  both new files. Production code was not changed.
 
 - [ ] **Step 5: Add the PR workflow**
 
