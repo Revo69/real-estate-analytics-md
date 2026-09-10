@@ -408,9 +408,17 @@ The dashboard may summarize the input contract, but it must link to the pipeline
   3.14.6 but no `py` launcher or Python 3.11 interpreter, so execution of the
   test suite under 3.11 remains part of the planned CI verification.
 
-- [ ] **Step 2: Add normalizer and quality tests**
+- [x] **Step 2: Add normalizer and quality tests**
 
   Cover valid, null, malformed, and boundary inputs for every function in `pipeline/silver/normalizers.py`; assert the current `quality_score` and `assign_status` boundaries at `0.55` and `0.85`. Use fixed dates rather than the current clock.
+
+  Verified 2026-09-10: `tests/test_normalizers.py` adds 48 deterministic
+  cases across all ten normalizers, including missing, malformed, decimal,
+  partial-address, and fixed date/datetime inputs. It also verifies the eight
+  quality fields, zero-value treatment, and exact status boundaries below and
+  at `0.55` and `0.85`. The focused file passes `48 passed`; the full suite
+  passes `59 passed`; Ruff passes for the new file. Production normalization
+  behavior was not changed.
 
 - [ ] **Step 3: Test Silver transformation contracts**
 
