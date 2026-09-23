@@ -126,78 +126,119 @@ create index if not exists gold_rent_current_sector_idx
 
 -- Indicative gross-yield view. Daily rent assumes 60% occupancy.
 
-create or replace view public.gold_rent_yield
-with (security_invoker = true) as
-with rent_stats as (
+create or replace view public.gold_rent_yield as
+with
+  rent_stats as (
     select
-        city,
-        sector,
-        deal_type,
-        round(avg(avg_price_eur), 2) as avg_price_eur,
-        sum(listings) as rent_listings
-    from public.gold_rent_current
-    where listings >= 3
-    group by city, sector, deal_type
-),
-monthly as (
+      gold_rent_current.city,
+      gold_rent_current.sector,
+      gold_rent_current.deal_type,
+      round(avg(gold_rent_current.avg_price_eur), 2) as avg_price_eur,
+      sum(gold_rent_current.listings) as rent_listings
+    from
+      gold_rent_current
+    where
+      gold_rent_current.listings >= 3
+    group by
+      gold_rent_current.city,
+      gold_rent_current.sector,
+      gold_rent_current.deal_type
+  ),
+  monthly as (
     select
-        city,
-        sector,
-        round(avg_price_eur * 12, 2) as annual_rent_monthly,
-        rent_listings as monthly_listings
-    from rent_stats
-    where deal_type = 'Сдаю помесячно'
-),
-daily as (
+      rent_stats.city,
+      rent_stats.sector,
+      round(rent_stats.avg_price_eur * 12::numeric, 2) as annual_rent_monthly,
+      rent_stats.rent_listings as monthly_listings
+    from
+      rent_stats
+    where
+      rent_stats.deal_type = 'Сдаю помесячно'::text
+  ),
+  daily as (
     select
-        city,
-        sector,
-        round(avg_price_eur * 365 * 0.60, 2) as annual_rent_daily_60pct,
-        rent_listings as daily_listings
-    from rent_stats
-    where deal_type = 'Сдаю посуточно'
-),
-sale as (
+      rent_stats.city,
+      rent_stats.sector,
+      round(rent_stats.avg_price_eur * 365::numeric * 0.60, 2) as annual_rent_daily_60pct,
+      rent_stats.rent_listings as daily_listings
+    from
+      rent_stats
+    where
+      rent_stats.deal_type = 'Сдаю посуточно'::text
+  ),
+  sale as (
     select
-        city,
-        sector,
-        round(avg(avg_price_eur), 0) as avg_sale_price_eur,
-        sum(listings) as sale_listings
-    from public.gold_estate_current
-    where listings >= 8
-    group by city, sector
-)
+      gold_estate_current.city,
+      gold_estate_current.sector,
+      round(avg(gold_estate_current.avg_price_eur), 0) as avg_sale_price_eur,
+      sum(gold_estate_current.listings) as sale_listings
+    from
+      gold_estate_current
+    where
+      gold_estate_current.listings >= 8
+    group by
+      gold_estate_current.city,
+      gold_estate_current.sector
+  ),
+  keys as (
+    select city, sector from monthly
+    union
+    select city, sector from daily
+    union
+    select city, sector from sale
+  )
 select
-    coalesce(m.city, d.city, s.city) as city,
-    coalesce(m.sector, d.sector, s.sector) as sector,
-    case
-        when s.avg_sale_price_eur > 0 and m.annual_rent_monthly > 0
-        then round(m.annual_rent_monthly / s.avg_sale_price_eur * 100, 2)
-        else null
-    end as yield_monthly_percent,
-    case
-        when s.avg_sale_price_eur > 0 and d.annual_rent_daily_60pct > 0
-        then round(d.annual_rent_daily_60pct / s.avg_sale_price_eur * 100, 2)
-        else null
-    end as yield_daily_percent,
-    m.annual_rent_monthly,
-    d.annual_rent_daily_60pct,
-    s.avg_sale_price_eur,
-    coalesce(m.monthly_listings, 0)::numeric
-        + coalesce(d.daily_listings, 0)::numeric as total_rent_listings,
-    s.sale_listings
-from sale s
-full join monthly m
-    on m.city = s.city
-   and m.sector = s.sector
-full join daily d
-    on d.city = s.city
-   and d.sector = s.sector
+  k.city,
+  k.sector,
+  case
+    when s.avg_sale_price_eur > 0::numeric
+    and m.annual_rent_monthly > 0::numeric then round(
+      m.annual_rent_monthly / s.avg_sale_price_eur * 100::numeric,
+      2
+    )
+    else null::numeric
+  end as yield_monthly_percent,
+  case
+    when s.avg_sale_price_eur > 0::numeric
+    and d.annual_rent_daily_60pct > 0::numeric then round(
+      d.annual_rent_daily_60pct / s.avg_sale_price_eur * 100::numeric,
+      2
+    )
+    else null::numeric
+  end as yield_daily_percent,
+  m.annual_rent_monthly,
+  d.annual_rent_daily_60pct,
+  s.avg_sale_price_eur,
+  COALESCE(m.monthly_listings, 0::bigint::numeric) + COALESCE(d.daily_listings, 0::bigint::numeric) as total_rent_listings,
+  s.sale_listings
+from
+  keys k
+  left join sale s on s.city = k.city and s.sector = k.sector
+  left join monthly m on m.city = k.city and m.sector = k.sector
+  left join daily d on d.city = k.city and d.sector = k.sector
 order by
-    yield_daily_percent desc nulls last,
-    yield_monthly_percent desc nulls last,
-    city,
-    sector;
+  (
+    case
+      when s.avg_sale_price_eur > 0::numeric
+      and d.annual_rent_daily_60pct > 0::numeric then round(
+        d.annual_rent_daily_60pct / s.avg_sale_price_eur * 100::numeric,
+        2
+      )
+      else null::numeric
+    end
+  ) desc nulls last,
+  (
+    case
+      when s.avg_sale_price_eur > 0::numeric
+      and m.annual_rent_monthly > 0::numeric then round(
+        m.annual_rent_monthly / s.avg_sale_price_eur * 100::numeric,
+        2
+      )
+      else null::numeric
+    end
+  ) desc nulls last,
+  k.city,
+  k.sector;
 
 -- Internal access boundary. Public API access is granted only on api_* tables.
 
